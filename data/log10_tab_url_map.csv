@@ -1,0 +1,15 @@
+tab,url
+sc-ops dashboard,https://log10-atlas.loadshare.net/appv2/sc-ops/dashboard/sc-overview
+fm-ops dashboard,https://log10-atlas.loadshare.net/appv2/fm-ops/dashboard/forward
+tracking,https://log10-atlas.loadshare.net/appv2/tracking/dashboard/tracking
+leads,https://log10-atlas.loadshare.net/appv2/leads/dashboard/pickup-report
+inbound,https://log10-atlas.loadshare.net/appv2/inbound/dashboard/scan
+inventory,https://log10-atlas.loadshare.net/appv2/inventory/dashboard/awb
+trips,https://log10-atlas.loadshare.net/appv2/trips/dashboard/connection-sheet
+pod,https://log10-atlas.loadshare.net/appv2/pod/dashboard/drs
+cod,https://log10-atlas.loadshare.net/appv2/cod/dashboard/cod
+rto,https://log10-atlas.loadshare.net/appv2/rto/dashboard/waybill
+reports,https://log10-atlas.loadshare.net/appv2/reports/dashboard/download
+digital payments,https://log10-atlas.loadshare.net/appv2/digital-payment/dashboard/payment-status
+monitoring reports,https://log10-atlas.loadshare.net/appv2/monitoring-reports/dashboard/mid-mile?date_params=start_date,end_date
+lm-ops dashboard,https://log10-atlas.loadshare.net/appv2/lm-ops/dashboard/pendency

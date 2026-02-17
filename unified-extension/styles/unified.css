@@ -1,0 +1,263 @@
+/* ═══════════════════════════════════════════════════════════════
+   VALMO OPS ASSISTANT - ENHANCED UI STYLES
+   Optimized for L1 Agents with visual hierarchy and easy scanning
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Base Overlay Styles (All Personas) ─── */
+.valmo-overlay{position:fixed;top:0;right:0;height:100vh;z-index:999999;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;font-size:14px}
+.valmo-tab{position:absolute;left:-50px;top:50%;transform:translateY(-50%);background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:15px 10px;border-radius:8px 0 0 8px;cursor:pointer;box-shadow:-2px 0 10px rgba(0,0,0,.2);transition:all .3s;min-width:50px;display:flex;flex-direction:column;align-items:center;gap:5px}
+.valmo-tab:hover{left:-45px;box-shadow:-4px 0 15px rgba(0,0,0,.3)}
+.valmo-icon{font-size:24px;line-height:1}
+.valmo-label{font-size:11px;font-weight:600;letter-spacing:0.5px;writing-mode:vertical-rl;text-orientation:mixed}
+.valmo-panel{position:absolute;right:-400px;top:0;width:400px;height:100vh;background:#f8f9fa;box-shadow:-2px 0 20px rgba(0,0,0,.15);transition:right .3s;display:flex;flex-direction:column;overflow:hidden}
+.valmo-panel.open{right:0}
+
+/* ─── Header ─── */
+.valmo-header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.valmo-tabs{display:flex;gap:10px;flex:1}
+.valmo-tab-btn{background:rgba(255,255,255,.15);border:none;color:#fff;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:6px}
+.valmo-tab-btn:hover{background:rgba(255,255,255,.25)}
+.valmo-tab-btn.active{background:#fff;color:#667eea}
+.tab-icon{font-size:16px}
+.tab-label{font-size:13px}
+.valmo-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:18px;transition:all .2s}
+.valmo-close:hover{background:rgba(255,255,255,.3);transform:rotate(90deg)}
+
+/* ─── Content Area ─── */
+.valmo-content{flex:1;overflow-y:auto;background:#f8f9fa}
+.valmo-tab-content{display:none;height:100%}
+.valmo-tab-content.active{display:block}
+
+/* ─────────────────────────────────────────────
+   PROCESS PULSE (CAPTAIN - LOG10) STYLES
+   ───────────────────────────────────────────── */
+
+.valmo-welcome {
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: #f5f7ff;
+  border-radius: 10px;
+  margin: 12px;
+}
+
+.valmo-nav {
+  display: flex;
+  gap: 8px;
+  padding: 0 12px 10px 12px;
+}
+
+.valmo-nav-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: #e8ebff;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.valmo-nav-btn.active {
+  background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+  color: white;
+}
+
+.valmo-view {
+  display: none;
+}
+
+.valmo-view.active {
+  display: block;
+}
+
+.valmo-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #7f8c8d;
+}
+
+.valmo-empty-icon {
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+.valmo-jarvis-box {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.valmo-jarvis-btn {
+  margin-top: 12px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   L1 ENHANCED UI STYLES
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Dashboard ─── */
+.valmo-dashboard{padding:20px}
+.valmo-greeting{text-align:center;padding:30px 20px 20px;background:linear-gradient(135deg,#667eea15 0%,#764ba215 100%);border-radius:12px;margin-bottom:24px}
+.greeting-icon{font-size:48px;margin-bottom:12px}
+.valmo-greeting h2{margin:0 0 8px;font-size:24px;color:#2c3e50;font-weight:700}
+.valmo-greeting p{margin:0;color:#7f8c8d;font-size:14px}
+
+/* ─── Section Titles ─── */
+.section-title{font-size:12px;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:1px;margin:20px 0 12px;display:flex;align-items:center;gap:6px}
+
+/* ─── Category Buttons (Quick Actions) ─── */
+.category-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px}
+.category-btn{background:#fff;border:2px solid #e0e0e0;border-radius:12px;padding:16px;cursor:pointer;transition:all .2s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+.category-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);border-color:currentColor}
+.category-icon{font-size:32px;line-height:1}
+.category-name{font-size:13px;font-weight:600;color:#2c3e50}
+.category-count{font-size:11px;color:#7f8c8d;font-weight:500}
+
+/* ─── Common Issues ─── */
+.issue-list{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.issue-btn{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:12px 16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;text-align:left}
+.issue-btn:hover{background:#f8f9fa;border-color:#667eea;transform:translateX(4px)}
+.issue-emoji{font-size:20px;flex-shrink:0}
+.issue-text{flex:1;font-size:13px;color:#2c3e50;font-weight:500}
+.issue-arrow{color:#7f8c8d;font-size:16px;flex-shrink:0}
+
+/* ─── Search Box ─── */
+.valmo-search-box{background:#fff;border-radius:12px;padding:4px;display:flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,.08);border:2px solid transparent;transition:border-color .2s}
+.valmo-search-box:focus-within{border-color:#667eea}
+.search-icon{font-size:20px;padding-left:12px;color:#7f8c8d}
+.valmo-search-box input{flex:1;border:none;outline:none;font-size:14px;padding:12px 8px;background:transparent}
+.search-btn{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;transition:all .2s}
+.search-btn:hover{transform:scale(1.05);box-shadow:0 4px 12px rgba(102,126,234,.3)}
+
+/* ─── Chat View ─── */
+.valmo-chat-view{display:flex;flex-direction:column;height:100%;background:#f8f9fa}
+.chat-header{padding:16px 20px;background:#fff;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;gap:12px}
+.chat-header h3{margin:0;font-size:16px;color:#2c3e50;flex:1}
+.back-btn{background:transparent;border:1px solid #e0e0e0;color:#667eea;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:4px}
+.back-btn:hover{background:#f8f9fa;border-color:#667eea}
+
+/* ─── Category View ─── */
+.valmo-category-view{padding:20px}
+.category-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #e0e0e0}
+.category-header h3{margin:0;flex:1;font-size:18px;color:#2c3e50}
+.sop-count{font-size:12px;color:#7f8c8d;background:#f8f9fa;padding:4px 12px;border-radius:12px}
+.sop-list{display:flex;flex-direction:column;gap:12px}
+
+/* ─── Conversation Area ─── */
+.conversation-area{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+.message{display:flex;gap:12px;align-items:flex-start;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.message-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.user-message .message-avatar{background:linear-gradient(135deg,#3498db 0%,#2980b9 100%)}
+.message-content{background:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.06);max-width:280px;font-size:13px;line-height:1.6;color:#2c3e50}
+.user-message .message-content{background:linear-gradient(135deg,#3498db 0%,#2980b9 100%);color:#fff}
+
+/* ─── Loading Indicator ─── */
+.loading-indicator{text-align:center;padding:12px 0}
+.loading-dots{display:flex;justify-content:center;gap:6px;margin-bottom:8px}
+.loading-dots span{width:8px;height:8px;border-radius:50%;background:#667eea;animation:bounce .6s infinite;opacity:.5}
+.loading-dots span:nth-child(2){animation-delay:.2s}
+.loading-dots span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px);opacity:1}}
+.loading-text{font-size:12px;color:#7f8c8d;font-weight:500}
+
+/* ─── Smart Answer Card ─── */
+.smart-answer-card{background:linear-gradient(135deg,#667eea08 0%,#764ba208 100%);border-left:4px solid #667eea;border-radius:8px;padding:16px;margin:8px 0}
+.answer-badge{display:inline-block;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;margin-bottom:12px;letter-spacing:0.5px}
+.answer-content{font-size:13px;line-height:1.7;color:#2c3e50}
+.answer-content strong{color:#667eea;font-weight:600}
+.step-item{display:flex;gap:12px;margin:8px 0;padding:10px;background:#fff;border-radius:8px}
+.step-number{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.step-content{flex:1;font-size:13px;color:#2c3e50}
+.section-marker{font-weight:700;color:#667eea;margin:12px 0 6px;font-size:13px;display:flex;align-items:center;gap:6px}
+.answer-actions{margin-top:12px;display:flex;gap:8px}
+.answer-action-btn{background:#fff;border:1px solid #e0e0e0;color:#667eea;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s}
+.answer-action-btn:hover{background:#f8f9fa;border-color:#667eea}
+
+/* ─── Chat Input Area ─── */
+.chat-input-area{padding:16px 20px;background:#fff;border-top:1px solid #e0e0e0;display:flex;gap:8px;align-items:center}
+.chat-input-area input{flex:1;border:1px solid #e0e0e0;border-radius:8px;padding:10px 12px;font-size:13px;outline:none;transition:border-color .2s}
+.chat-input-area input:focus{border-color:#667eea}
+.chat-input-area button{padding:10px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s}
+.chat-input-area button:first-of-type{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff}
+.chat-input-area button.secondary{background:#f8f9fa;color:#667eea;border:1px solid #e0e0e0}
+
+/* ─── SOP Cards ─── */
+.sop-card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-left:4px solid #e0e0e0;transition:all .2s}
+.sop-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.1);transform:translateY(-2px)}
+.sop-card.urgent{border-left-color:#ff6b6b}
+.sop-card.normal{border-left-color:#ffd93d}
+.sop-card.low{border-left-color:#4ecdc4}
+.sop-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.category-badge{background:#f8f9fa;color:#667eea;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;border:1px solid #e0e0e0}
+.tat-badge{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;display:flex;align-items:center;gap:4px}
+.tat-badge.urgent{background:#ff6b6b15;color:#ff6b6b}
+.tat-badge.normal{background:#ffd93d15;color:#d4a617}
+.tat-badge.low{background:#4ecdc415;color:#4ecdc4}
+.sop-scenario{font-size:15px;font-weight:700;color:#2c3e50;margin:0 0 12px;line-height:1.4}
+.sop-quick-info{margin-bottom:12px}
+.info-item{font-size:12px;color:#555;margin:6px 0;line-height:1.5}
+.info-item strong{color:#667eea;font-weight:600}
+.sop-actions{display:flex;gap:8px;margin-top:12px}
+.action-btn{background:#f8f9fa;border:1px solid #e0e0e0;color:#667eea;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:6px}
+.action-btn:hover{background:#fff;border-color:#667eea}
+.action-btn.primary{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border:none}
+.action-btn.primary:hover{transform:scale(1.05);box-shadow:0 4px 12px rgba(102,126,234,.3)}
+.expand-icon{transition:transform .3s}
+.sop-card.expanded .expand-icon{transform:rotate(180deg)}
+.sop-details{max-height:0;overflow:hidden;transition:max-height .3s}
+.sop-card.expanded .sop-details{max-height:800px;margin-top:16px;padding-top:16px;border-top:1px solid #e0e0e0}
+.detail-section{margin:12px 0}
+.detail-section strong{color:#667eea;font-size:13px}
+.process-text{background:#f8f9fa;padding:12px;border-radius:8px;font-size:12px;line-height:1.6;color:#2c3e50;white-space:pre-wrap;margin:8px 0 0;border:1px solid #e0e0e0}
+.copy-process-btn{background:#667eea;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s}
+.copy-process-btn:hover{background:#5568d3;transform:scale(1.05)}
+.copy-process-btn.copied{background:#4caf50}
+
+/* ─── Templates ─── */
+.template-view{padding:20px}
+.template-search-box{background:#fff;border-radius:12px;padding:4px;display:flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:24px;border:2px solid transparent;transition:border-color .2s}
+.template-search-box:focus-within{border-color:#667eea}
+.template-search-box input{flex:1;border:none;outline:none;font-size:14px;padding:12px}
+.most-used-section{margin-bottom:24px}
+.template-quick-list{display:flex;flex-direction:column;gap:8px}
+.template-quick-btn{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:12px 16px;cursor:pointer;transition:all .2s;display:flex;justify-content:space-between;align-items:center;text-align:left}
+.template-quick-btn:hover{background:#f8f9fa;border-color:#667eea;transform:translateX(4px)}
+.template-name{font-size:13px;color:#2c3e50;font-weight:500;flex:1}
+.usage-count{background:#667eea15;color:#667eea;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px}
+.category-accordion .category-item{background:#fff;border-radius:8px;margin-bottom:8px;overflow:hidden;border:1px solid #e0e0e0}
+.category-header{padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .2s}
+.category-header:hover{background:#f8f9fa}
+.category-icon{font-size:18px}
+.category-name{flex:1;font-size:14px;font-weight:600;color:#2c3e50}
+.category-count{background:#667eea15;color:#667eea;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px}
+.expand-icon{color:#7f8c8d;transition:transform .3s}
+.category-item.expanded .expand-icon{transform:rotate(180deg)}
+.category-content{max-height:0;overflow:hidden;transition:max-height .3s}
+.category-item.expanded .category-content{max-height:2000px;padding:8px}
+.template-card{background:#f8f9fa;border-radius:8px;padding:12px;margin:8px 0;border:1px solid #e0e0e0}
+.template-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:12px}
+.template-header h4{margin:0;font-size:14px;color:#2c3e50;font-weight:600;flex:1}
+.copy-template-btn{background:#667eea;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;flex-shrink:0}
+.copy-template-btn:hover{background:#5568d3;transform:scale(1.05)}
+.template-preview{background:#fff;padding:10px;border-radius:6px;font-size:11px;line-height:1.5;color:#555;margin:0;white-space:pre-wrap;border:1px solid #e0e0e0}
+.template-category-badge{background:#667eea15;color:#667eea;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px}
+.keyword-results{padding:12px 0}
+.results-header{font-size:14px;font-weight:600;color:#667eea;margin-bottom:16px;padding:8px 12px;background:#667eea15;border-radius:6px}
+.search-results{padding:12px 0}
+
+/* ─── No Results ─── */
+.no-results{text-align:center;padding:40px 20px}
+.no-results-icon{font-size:48px;margin-bottom:12px}
+.no-results p{margin:8px 0;color:#7f8c8d}
+.suggestion{font-size:12px;color:#999}
+
+/* ─── Utilities ─── */
+.valmo-footer{padding:12px;text-align:center;font-size:11px;color:#7f8c8d;border-top:1px solid #e0e0e0;background:#fff}

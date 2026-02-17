@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 340px;
+      padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+    .logo {
+      text-align: center;
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      letter-spacing: -1px;
+    }
+    .tagline {
+      text-align: center;
+      font-size: 13px;
+      opacity: 0.95;
+      margin-bottom: 24px;
+      font-weight: 500;
+    }
+    .card {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 22px;
+      border: 1px solid rgba(255,255,255,0.25);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    .status {
+      font-size: 13px;
+      margin-bottom: 18px;
+      padding: 12px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 600;
+    }
+    .status.logged-in { background: rgba(76, 175, 80, 0.35); }
+    input {
+      width: 100%;
+      padding: 13px 15px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      background: rgba(255,255,255,0.97);
+      color: #333;
+      margin-bottom: 14px;
+      font-family: inherit;
+    }
+    input::placeholder { color: #999; }
+    input:focus { outline: 2px solid rgba(255,255,255,0.5); }
+    button {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn-primary {
+      background: #fff;
+      color: #667eea;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.25);
+      color: #fff;
+      margin-top: 10px;
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.35);
+    }
+    .user-info {
+      text-align: center;
+      margin-bottom: 14px;
+    }
+    .user-email {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      word-break: break-all;
+    }
+    .role-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(255,255,255,0.3);
+      letter-spacing: 0.3px;
+    }
+    .hint {
+      font-size: 11px;
+      opacity: 0.85;
+      margin-top: 14px;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .hint code {
+      background: rgba(0,0,0,0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">Valmo</div>
+  <div class="tagline">Unified Ops Assistant</div>
+  
+  <div class="card">
+    <div id="status" class="status">Not logged in</div>
+    
+    <div id="loginForm">
+      <input 
+        type="email" 
+        id="emailInput" 
+        placeholder="Enter your email address" 
+        autocomplete="email"
+      />
+      <button class="btn-primary" id="loginBtn">Login</button>
+      <div class="hint">
+        <strong>Test Accounts:</strong><br>
+        <code>name_technotask@meesho.com</code> → L1 Agent<br>
+        <code>captain@gmail.com</code> → Captain<br>
+        <code>manager@meesho.com</code> → SC Manager
+      </div>
+    </div>
+    
+    <div id="loggedInView" style="display:none">
+      <div class="user-info">
+        <div class="user-email" id="userEmail"></div>
+        <div class="role-badge" id="userRole"></div>
+      </div>
+      <button class="btn-secondary" id="logoutBtn">Logout</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

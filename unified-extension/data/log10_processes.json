@@ -1,0 +1,20 @@
+[
+  {
+    "process_name": "RTO Bagging",
+    "platform": "log10",
+    "start_tab": "RTO",
+    "url_module": "rto",
+    "steps": [
+      "RTO",
+      "RTO Manifest",
+      "Create Manifest",
+      "Enter or Scan Manifest ID",
+      "the RTO destination from the Destination Dropdown",
+      "Create Manifest",
+      "Scan all the RTO Shipments",
+      "Lock Manifest",
+      "Yes"
+    ],
+    "video_link": "https://drive.google.com/file/d/1pWQHhU0pVGRM2a1PsqeOxqZNw10KymLN/view?usp=sharing"
+  }
+]

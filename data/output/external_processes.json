@@ -1,0 +1,14 @@
+[
+  {
+    "process_name": "Order Consumables",
+    "platform": "euphoria",
+    "video_link": "demo://placeholder_video",
+    "use_case": "training_only"
+  },
+  {
+    "process_name": "Raise ticket for any issues",
+    "platform": "ticketing",
+    "video_link": "demo://placeholder_video",
+    "use_case": "training_only"
+  }
+]

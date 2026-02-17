@@ -1,0 +1,405 @@
+/* ═══════════════════════════════════════════════════════════════
+   TAT MONITORING DASHBOARD STYLES
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Badge on Tab ─── */
+.ticket-badge {
+  background: #ff4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 4px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ─── Dashboard Container ─── */
+.tat-dashboard {
+  padding: 20px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+/* ─── Header ─── */
+.tat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.tat-title h3 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  color: #2c3e50;
+}
+
+.last-update {
+  font-size: 11px;
+  color: #999;
+}
+
+.refresh-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Stats Summary ─── */
+.tat-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card.total {
+  border-color: #667eea;
+}
+
+.stat-card.overdue {
+  border-color: #ff6b6b;
+}
+
+.stat-card.due-soon {
+  border-color: #ffd93d;
+}
+
+.stat-card.on-track {
+  border-color: #4ecdc4;
+}
+
+.stat-number {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.stat-card.total .stat-number { color: #667eea; }
+.stat-card.overdue .stat-number { color: #ff6b6b; }
+.stat-card.due-soon .stat-number { color: #d4a617; }
+.stat-card.on-track .stat-number { color: #4ecdc4; }
+
+.stat-label {
+  font-size: 12px;
+  color: #7f8c8d;
+  font-weight: 600;
+}
+
+/* ─── Section Headers ─── */
+.tat-section {
+  margin-bottom: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.section-icon {
+  font-size: 20px;
+}
+
+.section-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2c3e50;
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.collapse-btn {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: #7f8c8d;
+  transition: transform 0.3s;
+}
+
+.collapse-btn:hover {
+  color: #2c3e50;
+}
+
+/* ─── Ticket List ─── */
+.ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: max-height 0.3s;
+}
+
+.ticket-list.collapsed {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+
+/* ─── Ticket Cards ─── */
+.ticket-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border-left: 4px solid #e0e0e0;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.ticket-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateX(4px);
+}
+
+.ticket-card.red {
+  border-left-color: #ff6b6b;
+  background: linear-gradient(90deg, #ff6b6b08 0%, #fff 20px);
+}
+
+.ticket-card.yellow {
+  border-left-color: #ffd93d;
+  background: linear-gradient(90deg, #ffd93d08 0%, #fff 20px);
+}
+
+.ticket-card.green {
+  border-left-color: #4ecdc4;
+  background: linear-gradient(90deg, #4ecdc408 0%, #fff 20px);
+}
+
+/* ─── Ticket Header ─── */
+.ticket-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.ticket-id {
+  font-size: 12px;
+  font-weight: 700;
+  color: #667eea;
+  background: #667eea15;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.ticket-category {
+  font-size: 11px;
+  color: #7f8c8d;
+  background: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.escalated-badge {
+  font-size: 11px;
+  color: #ff6b6b;
+  background: #ff6b6b15;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* ─── Ticket Subject ─── */
+.ticket-subject {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+/* ─── Ticket Meta ─── */
+.ticket-meta {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.ticket-customer,
+.ticket-status {
+  font-size: 11px;
+  color: #7f8c8d;
+}
+
+/* ─── TAT Info ─── */
+.ticket-tat {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.tat-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.tat-icon {
+  font-size: 18px;
+}
+
+.tat-time {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tat-time.red { color: #ff6b6b; }
+.tat-time.yellow { color: #d4a617; }
+.tat-time.green { color: #4ecdc4; }
+
+.tat-detail {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: #7f8c8d;
+}
+
+/* ─── Ticket Actions ─── */
+.ticket-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.open-ticket-btn {
+  flex: 1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.open-ticket-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* ─── Loading State ─── */
+.tat-loading {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 16px;
+  border: 4px solid #f8f9fa;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ─── Empty State ─── */
+.tat-empty {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.tat-empty h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: #2c3e50;
+}
+
+.tat-empty p {
+  margin: 0 0 20px;
+  color: #7f8c8d;
+}
+
+.tat-empty button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ─── Error State ─── */
+.tat-error {
+  text-align: center;
+  padding: 40px 20px;
+  color: #ff6b6b;
+}
+
+.tat-error button {
+  background: #ff6b6b;
+  color: #fff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 16px;
+}
