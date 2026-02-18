@@ -48,7 +48,7 @@ const analytics = {
 // ─── Detect platform from URL ───
 function detectPlatform() {
   const url = window.location.href;
-  if (url.includes('loadshare.net')) return 'log10';
+  if (url.includes('console.valmo.in')) return 'log10';
   if (url.includes('kapturecrm.com')) return 'kapture';
   return 'unknown';
 }
