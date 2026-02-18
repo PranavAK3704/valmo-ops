@@ -153,7 +153,7 @@ def _extract_module_from_url(url: str):
     try:
         path = url.split("?")[0]
         parts = [p for p in path.split("/") if p]
-        appv2_idx = parts.index("appv2")
+        appv2_idx = parts.index("operations")
         return parts[appv2_idx + 1]
     except (ValueError, IndexError):
         return None
