@@ -123,6 +123,8 @@ def load_tab_url_map():
     if not os.path.exists(csv_path):
         print(f"⚠️  Tab-URL map not found at {csv_path} — url_module will be None")
         return mapping
+    else:
+        print(f"Found CSV at {csv_path}")
 
     with open(csv_path, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
