@@ -130,7 +130,7 @@ def load_tab_url_map():
         reader = csv.DictReader(f)
         print(f"CSV Headers: {reader.fieldnames}")
 
-        for row_num, row in enumerate(reader, starter=1):
+        for row_num, row in enumerate(reader, start=1):
             tab    = row.get("tab", "").strip().lower()
             url    = row.get("url", "").strip()
             print(f"Row {row_num}: tab='{tab}', url='{url[:50]}...'")
