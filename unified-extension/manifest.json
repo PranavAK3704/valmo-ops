@@ -33,7 +33,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://*.loadshare.net/*",
+        "https://console.valmo.in/*",
         "https://*.kapturecrm.com/*",
         "http://localhost:3000/*"
       ],
@@ -55,7 +55,7 @@
 
   "host_permissions": [
     "https://valmostagging.kapturecrm.com/*",
-    "https://*.loadshare.net/*",
+    "https://console.valmo.in/*",
     "https://wfnmltorfvaokqbzggkn.supabase.co/*",
     "https://docs.google.com/*",
     "https://api.groq.com/*"
@@ -71,7 +71,7 @@
         "data/*.mp4"
       ],
       "matches": [
-        "https://*.loadshare.net/*",
+        "https://console.valmo.in/*",
         "https://*.kapturecrm.com/*"
       ]
     }

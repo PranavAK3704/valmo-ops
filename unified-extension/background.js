@@ -51,7 +51,7 @@ function extractModule(url) {
   try {
     const pathname = new URL(url).pathname;
     const parts = pathname.split('/').filter(s => s.length > 0);
-    if (parts[0] === 'appv2' && parts.length >= 2) {
+    if (parts[0] === 'operations' && parts.length >= 2) {
       return parts[1].toLowerCase();
     }
     return null;
@@ -74,7 +74,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!changeInfo.url && !changeInfo.title) return;
   
   const url = changeInfo.url || tab.url || '';
-  if (!url.includes('loadshare.net')) return;
+  if (!url.includes('console.valmo.in')) return;
   
   const processes = await loadLog10Processes();
   const matches = findMatchingProcesses(url, processes);
