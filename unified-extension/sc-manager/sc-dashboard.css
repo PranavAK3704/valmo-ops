@@ -1,0 +1,327 @@
+/**
+ * sc-dashboard.css - SC Manager Dashboard Styling
+ */
+
+/* Metric Selector */
+.sc-metric-selector {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px 12px 0 0;
+  overflow-x: auto;
+}
+
+.sc-metric-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.sc-metric-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.sc-metric-btn.active {
+  background: white;
+  color: #667eea;
+  border-color: white;
+}
+
+.sc-metric-btn .metric-icon {
+  font-size: 20px;
+}
+
+.sc-metric-btn .metric-label {
+  font-size: 11px;
+}
+
+/* Dashboard Content */
+.sc-dashboard-content {
+  background: white;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+}
+
+.sc-dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.sc-dashboard-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+}
+
+.sc-dashboard-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.last-updated {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.refresh-btn,
+.export-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #667eea;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover,
+.export-btn:hover {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.refresh-btn svg,
+.export-btn svg {
+  stroke-width: 2;
+}
+
+/* Dashboard Body */
+.sc-dashboard-body {
+  padding: 20px;
+  min-height: 400px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* Table Styling */
+.sc-table-wrapper {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.sc-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.sc-data-table thead {
+  background: #667eea;
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.sc-data-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sc-data-table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.15s;
+}
+
+.sc-data-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.sc-data-table td {
+  padding: 12px 16px;
+  color: #333;
+}
+
+.sc-data-table .breach-value {
+  color: #dc3545;
+  font-weight: 700;
+}
+
+.table-footer {
+  padding: 12px 16px;
+  background: #f8f9fa;
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f0f0f0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error State */
+.error-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #dc3545;
+}
+
+.error-state button {
+  margin-top: 12px;
+  padding: 10px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.error-state button:hover {
+  background: #5568d3;
+}
+
+/* No Data State */
+.no-data {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+  font-size: 14px;
+}
+
+/* Placeholders */
+.shortage-placeholder,
+.shipment-tracker .placeholder {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* Shipment Tracker */
+.tracker-search {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.tracker-search input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.tracker-search input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.tracker-search button {
+  padding: 12px 32px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tracker-search button:hover {
+  background: #5568d3;
+}
+
+.shipment-path {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Scrollbar Styling */
+.sc-dashboard-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sc-dashboard-body::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+
+.sc-dashboard-body::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+.sc-dashboard-body::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sc-metric-selector {
+    flex-wrap: wrap;
+  }
+  
+  .sc-dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .sc-data-table {
+    font-size: 11px;
+  }
+  
+  .sc-data-table th,
+  .sc-data-table td {
+    padding: 8px 12px;
+  }
+}

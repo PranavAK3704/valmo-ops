@@ -17,6 +17,7 @@ const SHEETS_CONFIG = {
   sops_url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTtfp2EauVkBu1RILwErMMDs7mfwdzC1V9CdP0bf4ZjEsoe_QEr7o1slJm5tsMxNIqMK6vudtYjHCql/pub?gid=1281163884&single=true&output=csv',
   templates_url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNGnSVBmO7sU79z_zNfAa9N2S0yUSDR6yyOBTtnEi_m-XGBV6eBK0H9DJMuaDp_l0YA4enSjTKzNsk/pub?gid=0&single=true&output=csv',
   
+  sc_sops_url: 'YOUR_SC_SOP_SHEET_PUBLISHED_CSV_URL',
   // Refresh interval (in milliseconds)
   // 300000 = 5 minutes
   refresh_interval: 300000

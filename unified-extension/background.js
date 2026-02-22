@@ -435,6 +435,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
     return true;
   }
+
+  if (message.type === 'FETCH_METABASE') {
+    (async () => {
+      try {
+        const response = await fetch(message.queryConfig.endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          sendResponse({ success: false, error: `HTTP ${response.status}` });
+          return;
+        }
+        
+        const data = await response.json();
+        sendResponse({
+          success: true,
+          rows: data.data?.rows || [],
+          columns: data.data?.cols || [],
+          timestamp: Date.now()
+        });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
   
   sendResponse({ error: 'Unknown message type' });
 });

@@ -1,0 +1,437 @@
+/**
+ * sc-manager-overlay.css - SC Manager Overlay Styling
+ * 
+ * Fixes the layout and makes it look professional
+ */
+
+/* Main Overlay Container */
+.sc-manager-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 450px;
+  height: 100vh;
+  background: white;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Header */
+.sc-manager-overlay .overlay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.sc-manager-overlay .header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sc-manager-overlay .header-icon {
+  font-size: 24px;
+}
+
+.sc-manager-overlay .close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sc-manager-overlay .close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.sc-manager-overlay .close-btn svg {
+  stroke: white;
+  stroke-width: 2.5;
+}
+
+/* Tab Navigation */
+.sc-manager-overlay .overlay-tabs {
+  display: flex;
+  background: #f5f5f5;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.sc-manager-overlay .tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+}
+
+.sc-manager-overlay .tab-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.sc-manager-overlay .tab-btn.active {
+  background: white;
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+.sc-manager-overlay .tab-icon {
+  font-size: 20px;
+}
+
+/* Tab Content */
+.sc-manager-overlay .overlay-content {
+  flex: 1;
+  overflow-y: auto;
+  background: white;
+}
+
+.sc-manager-overlay .tab-content {
+  display: none;
+  padding: 20px;
+  animation: fadeIn 0.3s;
+}
+
+.sc-manager-overlay .tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Processes Tab */
+.sc-manager-overlay .processes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sc-manager-overlay .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.sc-manager-overlay .section-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+}
+
+.sc-manager-overlay .process-filters {
+  display: flex;
+  gap: 6px;
+}
+
+.sc-manager-overlay .filter-btn {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sc-manager-overlay .filter-btn:hover {
+  background: #f5f5f5;
+}
+
+.sc-manager-overlay .filter-btn.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.sc-manager-overlay .processes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sc-manager-overlay .process-card {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 16px;
+  transition: all 0.2s;
+}
+
+.sc-manager-overlay .process-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.sc-manager-overlay .process-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.sc-manager-overlay .process-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+.sc-manager-overlay .badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sc-manager-overlay .badge.new {
+  background: #4caf50;
+  color: white;
+}
+
+.sc-manager-overlay .process-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.sc-manager-overlay .watch-btn {
+  width: 100%;
+  padding: 10px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sc-manager-overlay .watch-btn:hover {
+  background: #5568d3;
+}
+
+.sc-manager-overlay .loading,
+.sc-manager-overlay .error,
+.sc-manager-overlay .no-data {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-size: 13px;
+}
+
+.sc-manager-overlay .error {
+  color: #dc3545;
+}
+
+/* SOPs + Chatbot Tab */
+.sc-manager-overlay .sops-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sc-manager-overlay .sop-categories h4,
+.sc-manager-overlay .chatbot-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sc-manager-overlay .sop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sc-manager-overlay .sop-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sc-manager-overlay .sop-item:hover {
+  background: white;
+  border-color: #667eea;
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.1);
+}
+
+.sc-manager-overlay .sop-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.sc-manager-overlay .sop-info {
+  flex: 1;
+}
+
+.sc-manager-overlay .sop-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.sc-manager-overlay .sop-desc {
+  font-size: 11px;
+  color: #666;
+  line-height: 1.4;
+}
+
+/* Chatbot */
+.sc-manager-overlay .chatbot-container {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 300px;
+}
+
+.sc-manager-overlay .chat-messages {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sc-manager-overlay .chat-message {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sc-manager-overlay .chat-message.user {
+  align-self: flex-end;
+  background: #667eea;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.sc-manager-overlay .chat-message.assistant {
+  align-self: flex-start;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-bottom-left-radius: 4px;
+}
+
+.sc-manager-overlay .chat-message ul {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+}
+
+.sc-manager-overlay .chat-message li {
+  margin: 4px 0;
+}
+
+.sc-manager-overlay .chat-input-container {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+}
+
+.sc-manager-overlay .chat-input-container input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.sc-manager-overlay .chat-input-container input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.sc-manager-overlay .chat-input-container button {
+  padding: 10px 20px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sc-manager-overlay .chat-input-container button:hover {
+  background: #5568d3;
+}
+
+/* Scrollbar */
+.sc-manager-overlay .overlay-content::-webkit-scrollbar,
+.sc-manager-overlay .chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sc-manager-overlay .overlay-content::-webkit-scrollbar-track,
+.sc-manager-overlay .chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sc-manager-overlay .overlay-content::-webkit-scrollbar-thumb,
+.sc-manager-overlay .chat-messages::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.sc-manager-overlay .overlay-content::-webkit-scrollbar-thumb:hover,
+.sc-manager-overlay .chat-messages::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .sc-manager-overlay {
+    width: 100%;
+  }
+}

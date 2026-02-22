@@ -39,7 +39,9 @@
       ],
       "css": [
         "styles/unified.css",
-        "tat-system/tat-dashboard.css"
+        "tat-system/tat-dashboard.css",
+        "sc-manager/sc-dashboard.css",
+        "sc-manager/sc-manager-overlay.css"
       ],
       "js": [
         "config.js",
@@ -47,8 +49,16 @@
         "tat-system/ticket-tracker.js",
         "tat-system/tat-dashboard-ui.js",
         "smart-chatbot.js",
+        "sc-manager/metabase-queries.js",
+        "sc-manager/sc-dashboard.js",
+        "sc-manager/sc-manager-overlay.js",
         "content.js"
       ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://metabase-main.bi.meeshogcp.in/*"],
+      "js": ["sc-manager/metabase-bridge.js"],
       "run_at": "document_idle"
     }
   ],

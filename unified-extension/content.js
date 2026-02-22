@@ -98,10 +98,6 @@ function injectOverlay() {
   } else if (role === 'SC Manager' && currentPlatform === 'log10') {
     overlayInstance = new SCManagerOverlay();
   }
-  
-  if (overlayInstance) {
-    overlayInstance.inject();
-  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1126,7 +1122,7 @@ class L1ChatbotOverlayEnhanced {
 // OVERLAY 3: SC Manager (UNCHANGED)
 // ═══════════════════════════════════════════════════════════════
 
-class SCManagerOverlay {
+/*class SCManagerOverlay {
   inject() {
     const html = `
       <div id="${OVERLAY_ID}" class="valmo-overlay valmo-sc">
@@ -1161,7 +1157,7 @@ class SCManagerOverlay {
       document.getElementById('valmo-panel')?.classList.remove('open');
     });
   }
-}
+}*/
 
 // ─── Listen for login/logout ───
 chrome.runtime.onMessage.addListener((message) => {
