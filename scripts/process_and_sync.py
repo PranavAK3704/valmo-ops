@@ -71,9 +71,22 @@ def write_results_to_sheet(all_log10):
     try:
         worksheet = sheet.worksheet(OUTPUT_TAB_NAME)
     except gspread.WorksheetNotFound:
-        worksheet = sheet.add_worksheet(title=OUTPUT_TAB_NAME, rows=500, cols=10)
+        worksheet = sheet.add_worksheet(title=OUTPUT_TAB_NAME, rows=500, cols=15)
 
-    headers = ["Process_Name", "URL_Module", "Start_Tab", "Video_Link", "Platform", "Active"]
+    # PHASE 1: Added 6 new columns for progress tracking & gamification
+    headers = [
+        "Process_Name", 
+        "URL_Module", 
+        "Start_Tab", 
+        "Video_Link", 
+        "Platform",
+        "Priority",           # NEW: MUST_KNOW or GOOD_TO_KNOW
+        "Status",             # NEW: NEW, UPDATED, or STABLE
+        "Date_Added",         # NEW: YYYY-MM-DD
+        "Date_Updated",       # NEW: YYYY-MM-DD
+        "Version",            # NEW: 1.0, 1.1, etc.
+        "Completion_Required" # NEW: TRUE or FALSE
+    ]
 
     rows = [headers]
     for proc in all_log10:
@@ -83,13 +96,20 @@ def write_results_to_sheet(all_log10):
             proc.get("start_tab", ""),
             proc.get("video_link", ""),
             "log10",
-            "TRUE"
+            # PHASE 1: Default values for new columns
+            proc.get("priority", "GOOD_TO_KNOW"),           # Default to GOOD_TO_KNOW
+            proc.get("status", "STABLE"),                   # Default to STABLE
+            proc.get("date_added", "2026-02-28"),           # Current date
+            proc.get("date_updated", "2026-02-28"),         # Current date
+            proc.get("version", "1.0"),                     # Default version
+            proc.get("completion_required", "FALSE")        # Default to FALSE
         ])
 
     worksheet.clear()
     worksheet.update("A1", rows)
 
     print(f"✅ Written {len(all_log10)} processes to '{OUTPUT_TAB_NAME}'")
+    print(f"   - Added PHASE 1 columns: Priority, Status, Date_Added, Date_Updated, Version, Completion_Required")
 
 
 def fetch_input_rows():
