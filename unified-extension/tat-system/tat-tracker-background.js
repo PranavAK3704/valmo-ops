@@ -411,5 +411,10 @@ class TATTrackerBackground {
 // Global instance
 const tatTrackerBG = new TATTrackerBackground();
 
-// Auto-start when extension loads
-tatTrackerBG.start();
+// Auto-start ONLY on Kapture domain
+if (window.location.hostname.includes('kapturecrm.com')) {
+  tatTrackerBG.start();
+  console.log('[TAT Tracker BG] Started (Kapture detected)');
+} else {
+  console.log('[TAT Tracker BG] Skipped (not on Kapture domain)');
+}
