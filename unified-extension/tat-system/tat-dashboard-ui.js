@@ -53,6 +53,17 @@ async function loadTATDashboard() {
   const container = document.getElementById('tat-dashboard-container');
   if (!container) return;
   
+  // Check if extension context is still valid
+  if (!chrome.runtime?.id) {
+    console.log('[TAT Dashboard] Extension context invalidated');
+    container.innerHTML = `
+      <div class="tat-error">
+        <p>⚠️ Extension reloaded. Please refresh the page.</p>
+      </div>
+    `;
+    return;
+  }
+  
   // Show loading
   container.innerHTML = `
     <div class="tat-loading">
@@ -62,17 +73,27 @@ async function loadTATDashboard() {
   `;
   
   try {
+    console.log('[TAT Dashboard] Chrome object:', typeof chrome);
+    console.log('[TAT Dashboard] Chrome.storage:', typeof chrome?.storage);
+    console.log('[TAT Dashboard] Chrome.storage.local:', typeof chrome?.storage?.local);
+    
     // Get tracked tickets from storage
     const result = await chrome.storage.local.get(['trackedTickets', 'lastTicketFetch']);
+    
+    console.log('[TAT Dashboard] Storage result:', result);
+    console.log('[TAT Dashboard] Tickets count:', result.trackedTickets?.length || 0);
     
     const tickets = result.trackedTickets || [];
     const lastFetch = result.lastTicketFetch || 0;
     const timeSinceUpdate = Math.floor((Date.now() - lastFetch) / 1000);
     
     if (tickets.length === 0) {
+      console.log('[TAT Dashboard] No tickets found in storage');
       container.innerHTML = renderEmptyState();
       return;
     }
+    
+    console.log('[TAT Dashboard] Rendering', tickets.length, 'tickets');
     
     // Group tickets by urgency
     const grouped = groupTicketsByUrgency(tickets);
@@ -88,13 +109,41 @@ async function loadTATDashboard() {
     updateOverdueBadge(stats.overdue);
     
   } catch (error) {
-    console.error('[TAT Dashboard] Error loading:', error);
-    container.innerHTML = `
-      <div class="tat-error">
-        <p>❌ Failed to load tickets</p>
-        <button onclick="loadTATDashboard()">Retry</button>
-      </div>
-    `;
+    if (error.message?.includes('Extension context invalidated')) {
+      console.log('[TAT Dashboard] Context invalidated, needs page refresh');
+      container.innerHTML = `
+        <div class="tat-error">
+          <p>⚠️ Extension reloaded. Please refresh the page.</p>
+          <button onclick="window.location.reload()">Refresh Page</button>
+        </div>
+      `;
+    } else {
+      console.error('[TAT Dashboard] Error loading:', error);
+      container.innerHTML = `
+        <div class="tat-error">
+          <p>❌ Failed to load tickets</p>
+          <button onclick="loadTATDashboard()">Retry</button>
+        </div>
+      `;
+    }
+  }
+}
+
+/**
+ * Refresh button handler - reload the dashboard
+ */
+function refreshTickets() {
+  loadTATDashboard();
+}
+
+/**
+ * Export button handler - trigger Excel export
+ */
+async function exportTATAnalytics() {
+  if (typeof tatAnalytics !== 'undefined') {
+    await tatAnalytics.exportToExcel();
+  } else {
+    alert('Analytics module not loaded. Please refresh the page.');
   }
 }
 
@@ -133,9 +182,14 @@ function renderTATDashboard(grouped, stats, timeSinceUpdate) {
           <h3>📊 My Tickets</h3>
           <span class="last-update">Updated ${timeSinceUpdate}s ago</span>
         </div>
-        <button class="refresh-btn" onclick="refreshTickets()">
-          🔄 Refresh
-        </button>
+        <div style="display: flex; gap: 8px;">
+          <button class="refresh-btn" onclick="refreshTickets()">
+            🔄 Refresh
+          </button>
+          <button class="refresh-btn" onclick="exportTATAnalytics()" style="background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);">
+            📊 Export Excel
+          </button>
+        </div>
       </div>
       
       <!-- Stats Summary -->
@@ -355,6 +409,19 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.appendChild(document.createTextNode(str || ''));
   return div.innerHTML;
+}
+
+/**
+ * Export TAT Analytics to Excel
+ */
+async function exportTATAnalytics() {
+  console.log('[TAT Dashboard] Exporting analytics...');
+  
+  if (typeof tatAnalytics !== 'undefined') {
+    await tatAnalytics.exportToExcel();
+  } else {
+    alert('Analytics module not loaded. Please refresh the page.');
+  }
 }
 
 // Initialize when overlay loads

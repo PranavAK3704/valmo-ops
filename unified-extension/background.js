@@ -33,10 +33,28 @@ async function loadLog10Processes() {
         url_module:   cols[1]?.trim().replace(/"/g, ''),
         start_tab:    cols[2]?.trim().replace(/"/g, ''),
         video_link:   cols[3]?.trim().replace(/"/g, ''),
-        platform:     cols[4]?.trim().replace(/"/g, '')
+        platform:     cols[4]?.trim().replace(/"/g, ''),
+        // PHASE 1: New columns for progress tracking & gamification
+        priority:     cols[5]?.trim().replace(/"/g, '') || 'GOOD_TO_KNOW',
+        status:       cols[6]?.trim().replace(/"/g, '') || 'STABLE',
+        date_added:   cols[7]?.trim().replace(/"/g, '') || new Date().toISOString().split('T')[0],
+        date_updated: cols[8]?.trim().replace(/"/g, '') || new Date().toISOString().split('T')[0],
+        version:      cols[9]?.trim().replace(/"/g, '') || '1.0',
+        completion_required: (cols[10]?.trim().replace(/"/g, '') || 'FALSE').toUpperCase() === 'TRUE'
       }));
 
     console.log('[Process Pulse] Loaded', processes.length, 'from Training_Videos sheet');
+    
+    // PHASE 1: Log breakdown by priority
+    const mustKnow = processes.filter(p => p.priority === 'MUST_KNOW').length;
+    const goodToKnow = processes.filter(p => p.priority === 'GOOD_TO_KNOW').length;
+    console.log(`[Process Pulse]   - ${mustKnow} MUST_KNOW, ${goodToKnow} GOOD_TO_KNOW`);
+    
+    // PHASE 1: Log breakdown by status
+    const newProcs = processes.filter(p => p.status === 'NEW').length;
+    const updated = processes.filter(p => p.status === 'UPDATED').length;
+    console.log(`[Process Pulse]   - ${newProcs} NEW, ${updated} UPDATED`);
+    
     return processes;
 
   } catch (err) {
@@ -91,312 +109,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// TAT TRACKING (Kapture - L1 Agents)
+// TAT TRACKING - Now handled by tat-tracker-background.js
 // ═══════════════════════════════════════════════════════════════
-
-let lastFetchTime = 0;
-const FETCH_INTERVAL = 30000; // 30 seconds
-
-/**
- * Initialize TAT tracking when extension loads
- */
-chrome.runtime.onInstalled.addListener(() => {
-  console.log('[TAT Tracking] Extension installed/updated');
-  
-  // Set up alarm for periodic ticket fetching
-  chrome.alarms.create('fetch-tickets', {
-    periodInMinutes: 0.5 // Every 30 seconds
-  });
-  
-  // Initial fetch
-  fetchTicketsBackground();
-});
-
-/**
- * Listen for alarms
- */
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'fetch-tickets') {
-    fetchTicketsBackground();
-  }
-});
-
-/**
- * Fetch tickets in background
- */
-async function fetchTicketsBackground() {
-  const now = Date.now();
-  
-  if (now - lastFetchTime < FETCH_INTERVAL) {
-    console.log('[TAT Tracking] Skipping fetch (too soon)');
-    return;
-  }
-  
-  try {
-    console.log('[TAT Tracking] Fetching tickets...');
-    
-    const response = await fetch('https://valmostagging.kapturecrm.com/api/version3/ticket/get-ticket-list', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({
-        sort_by_column: 'last_conversation_time',
-        type: 5,
-        status: 'P',
-        folder_id: -1,
-        query: '',
-        page_no: 0,
-        sort_type: 'desc',
-        page_size: 100,
-        response_type: 'json',
-        key_beautify: 'yes'
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API returned ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (data.status === 'Success' && data.response && data.response.tickets) {
-      const tickets = data.response.tickets;
-      console.log(`[TAT Tracking] ✓ Fetched ${tickets.length} tickets`);
-      
-      const processed = tickets.map(ticket => processTicketBackground(ticket));
-      
-      await chrome.storage.local.set({
-        trackedTickets: processed,
-        lastTicketFetch: now
-      });
-      
-      lastFetchTime = now;
-      updateBadge(processed);
-      checkUrgentTickets(processed);
-      
-      return processed;
-    } else {
-      console.warn('[TAT Tracking] No tickets in response');
-      return [];
-    }
-    
-  } catch (error) {
-    console.error('[TAT Tracking] Fetch failed:', error);
-    return [];
-  }
-}
-
-/**
- * Process individual ticket
- */
-function processTicketBackground(ticket) {
-  const now = Date.now();
-  
-  const dateValue = ticket.date || ticket.createdDate || ticket.created_date || ticket.created_at;
-  const createdDate = parseKaptureDate(dateValue);
-  
-  const elapsedMs = now - createdDate;
-  const elapsedHours = elapsedMs / (1000 * 60 * 60);
-  
-  const sopMatch = matchSOPCategory(ticket.taskTitle);
-  const remainingHours = sopMatch.tat - elapsedHours;
-  const urgency = calculateUrgency(sopMatch.tat, elapsedHours);
-  
-  return {
-    id: ticket.id,
-    ticketId: ticket.ticketId,
-    subject: ticket.taskTitle,
-    customerEmail: ticket.email,
-    status: ticket.status,
-    substatus: ticket.substatus,
-    substatusName: ticket.substatusName,
-    isEscalated: ticket.isEscalated,
-    createdDate: createdDate,
-    createdDateStr: formatDateForDisplay(dateValue),
-    lastConversationTime: ticket.lastConversationTime,
-    sopCategory: sopMatch.category,
-    tatHours: sopMatch.tat,
-    elapsedHours: Math.round(elapsedHours * 10) / 10,
-    remainingHours: Math.round(remainingHours * 10) / 10,
-    urgencyLevel: urgency.status,
-    urgencyColor: urgency.color,
-    urgencyIcon: urgency.icon,
-    ticketURL: `https://valmostagging.kapturecrm.com${ticket.ticketURL}`,
-    folderColor: ticket.folderColor,
-    conversationCount: ticket.totalConversationCount
-  };
-}
-
-/**
- * Parse Kapture date - handles multiple formats
- */
-function parseKaptureDate(dateValue) {
-  if (dateValue && typeof dateValue === 'object' && !Array.isArray(dateValue)) {
-    if ('year' in dateValue && 'month' in dateValue && 'date' in dateValue) {
-      const year = dateValue.year + 1900;
-      const month = dateValue.month;
-      const date = dateValue.date;
-      const hours = dateValue.hours || 0;
-      const minutes = dateValue.minutes || 0;
-      const seconds = dateValue.seconds || 0;
-      
-      return new Date(year, month, date, hours, minutes, seconds).getTime();
-    }
-    
-    if (dateValue.timestamp) {
-      return dateValue.timestamp < 10000000000 ? dateValue.timestamp * 1000 : dateValue.timestamp;
-    }
-    
-    console.warn('[TAT Tracking] Unknown date object format:', dateValue);
-    return Date.now();
-  }
-  
-  if (typeof dateValue === 'string') {
-    const parts = dateValue.match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
-    if (parts) {
-      const [_, year, month, day, hour, min, sec] = parts;
-      return new Date(year, month - 1, day, hour, min, sec).getTime();
-    }
-    console.warn('[TAT Tracking] Could not parse date string:', dateValue);
-    return Date.now();
-  }
-  
-  if (typeof dateValue === 'number') {
-    return dateValue < 10000000000 ? dateValue * 1000 : dateValue;
-  }
-  
-  console.warn('[TAT Tracking] Invalid date value:', dateValue, typeof dateValue);
-  return Date.now();
-}
-
-/**
- * Format date for display
- */
-function formatDateForDisplay(dateValue) {
-  if (!dateValue) return '';
-  
-  if (typeof dateValue === 'object' && 'year' in dateValue) {
-    const year = dateValue.year + 1900;
-    const month = String(dateValue.month + 1).padStart(2, '0');
-    const date = String(dateValue.date).padStart(2, '0');
-    const hours = String(dateValue.hours || 0).padStart(2, '0');
-    const minutes = String(dateValue.minutes || 0).padStart(2, '0');
-    const seconds = String(dateValue.seconds || 0).padStart(2, '0');
-    return `${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
-  }
-  
-  if (typeof dateValue === 'string') {
-    return dateValue;
-  }
-  
-  if (typeof dateValue === 'number') {
-    const timestamp = dateValue < 10000000000 ? dateValue * 1000 : dateValue;
-    const d = new Date(timestamp);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const date = String(d.getDate()).padStart(2, '0');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
-  }
-  
-  return '';
-}
-
-/**
- * Match ticket subject to SOP category
- */
-function matchSOPCategory(subject) {
-  if (!subject) return { category: 'General', tat: 48 };
-  const lower = subject.toLowerCase();
-  
-  if (lower.includes('shortage') || lower.includes('loss') || lower.includes('debit') || lower.includes('hardstop')) {
-    return { category: 'Losses & Debits', tat: 72 };
-  }
-  if (lower.includes('payment') || lower.includes('invoice') || lower.includes('payout') || lower.includes('gst')) {
-    return lower.includes('not received') || lower.includes('pending') 
-      ? { category: 'Payments', tat: 12 }
-      : { category: 'Payments', tat: 72 };
-  }
-  if (lower.includes('cod') || lower.includes('deposit') || lower.includes('cash')) {
-    return { category: 'COD', tat: 24 };
-  }
-  if (lower.includes('load') || lower.includes('volume') || lower.includes('manifest')) {
-    return { category: 'Orders & Planning', tat: 12 };
-  }
-  if (lower.includes('cms') || lower.includes('log10') || lower.includes('system') || lower.includes('tool')) {
-    return { category: 'Tech Issues', tat: 24 };
-  }
-  return { category: 'General', tat: 48 };
-}
-
-/**
- * Calculate urgency level
- */
-function calculateUrgency(tatHours, elapsedHours) {
-  const remaining = tatHours - elapsedHours;
-  const threshold = tatHours * 0.25;
-  
-  if (remaining < 0) return { status: 'OVERDUE', color: 'red', icon: '🔴', sortOrder: 1 };
-  if (remaining < threshold) return { status: 'DUE_SOON', color: 'yellow', icon: '🟡', sortOrder: 2 };
-  return { status: 'ON_TRACK', color: 'green', icon: '🟢', sortOrder: 3 };
-}
-
-/**
- * Update extension badge
- */
-function updateBadge(tickets) {
-  const overdue = tickets.filter(t => t.urgencyLevel === 'OVERDUE').length;
-  if (overdue > 0) {
-    chrome.action.setBadgeText({ text: overdue.toString() });
-    chrome.action.setBadgeBackgroundColor({ color: '#ff4444' });
-  } else {
-    chrome.action.setBadgeText({ text: '' });
-  }
-}
-
-/**
- * Check for urgent tickets
- */
-async function checkUrgentTickets(tickets) {
-  const urgent = tickets.filter(t => t.urgencyLevel === 'OVERDUE' && t.remainingHours < -1);
-  if (urgent.length === 0) return;
-  
-  const { notifiedTickets = [] } = await chrome.storage.local.get(['notifiedTickets']);
-  
-  for (const ticket of urgent) {
-    if (!notifiedTickets.includes(ticket.ticketId)) {
-      console.log(`[TAT Tracking] 🔴 URGENT: Ticket ${ticket.ticketId} is overdue by ${Math.abs(ticket.remainingHours).toFixed(1)}h`);
-      notifiedTickets.push(ticket.ticketId);
-    }
-  }
-  
-  await chrome.storage.local.set({ notifiedTickets });
-}
-
-async function logTicketOpened(data) {
-  const { ticketOpenLogs = [] } = await chrome.storage.local.get(['ticketOpenLogs']);
-  ticketOpenLogs.push({
-    url: data.url,
-    timestamp: data.timestamp,
-    date: new Date(data.timestamp).toISOString()
-  });
-  if (ticketOpenLogs.length > 1000) ticketOpenLogs.shift();
-  await chrome.storage.local.set({ ticketOpenLogs });
-}
-
-async function getTicketStats() {
-  const { trackedTickets = [] } = await chrome.storage.local.get(['trackedTickets']);
-  return {
-    total: trackedTickets.length,
-    overdue: trackedTickets.filter(t => t.urgencyLevel === 'OVERDUE').length,
-    dueSoon: trackedTickets.filter(t => t.urgencyLevel === 'DUE_SOON').length,
-    onTrack: trackedTickets.filter(t => t.urgencyLevel === 'ON_TRACK').length
-  };
-}
+// This section is intentionally empty - tracking moved to dedicated module
 
 // ═══════════════════════════════════════════════════════════════
 // UNIFIED MESSAGE HANDLER
@@ -415,24 +130,51 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
-  // TAT Tracking messages
-  if (message.type === 'REFRESH_TICKETS') {
-    fetchTicketsBackground().then(() => {
-      sendResponse({ success: true });
+  // PHASE 1: Get all processes for progress tracking
+  if (message.type === 'GET_ALL_PROCESSES') {
+    loadLog10Processes().then(processes => {
+      sendResponse({ processes });
+    }).catch(err => {
+      console.error('[Background] GET_ALL_PROCESSES failed:', err);
+      sendResponse({ processes: [] });
     });
     return true;
   }
   
+  // TAT Tracking messages - Handled by tat-tracker-background.js
+  // Keep these for backwards compatibility with UI
   if (message.type === 'TICKET_OPENED') {
-    logTicketOpened(message);
+    (async () => {
+      // Log ticket open event for analytics
+      const { ticketOpenLogs = [] } = await chrome.storage.local.get(['ticketOpenLogs']);
+      ticketOpenLogs.push({
+        url: message.url,
+        timestamp: message.timestamp,
+        date: new Date(message.timestamp).toISOString()
+      });
+      if (ticketOpenLogs.length > 1000) ticketOpenLogs.shift();
+      await chrome.storage.local.set({ ticketOpenLogs });
+      sendResponse({ success: true });
+    })();
+    return true;
+  }
+
+  if (message.type === 'EXPORT_TAT_ANALYTICS') {
+    // Trigger Excel export from analytics module
     sendResponse({ success: true });
     return true;
   }
-  
-  if (message.type === 'GET_TICKET_STATS') {
-    getTicketStats().then(stats => {
-      sendResponse(stats);
-    });
+
+  if (message.type === 'UPDATE_BADGE') {
+    // Update extension badge (can only be done in service worker)
+    const count = message.count || 0;
+    if (count > 0) {
+      chrome.action.setBadgeText({ text: count.toString() });
+      chrome.action.setBadgeBackgroundColor({ color: '#ff4444' });
+    } else {
+      chrome.action.setBadgeText({ text: '' });
+    }
+    sendResponse({ success: true });
     return true;
   }
 
@@ -463,6 +205,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true;
   }
+
+  // SC Manager - Metabase fetch via bridge
+if (message.type === 'FETCH_METABASE_VIA_BRIDGE') {
+  (async () => {
+    try {
+      // Find Metabase tab
+      const tabs = await chrome.tabs.query({ url: 'https://metabase-main.bi.meeshogcp.in/*' });
+      
+      if (tabs.length === 0) {
+        sendResponse({ success: false, error: 'NO_METABASE_TAB' });
+        return;
+      }
+      
+      // Send message to Metabase tab's bridge
+      const result = await chrome.tabs.sendMessage(tabs[0].id, {
+        type: 'FETCH_METABASE_FROM_PAGE',
+        endpoint: message.endpoint
+      });
+      
+      sendResponse(result);
+      
+    } catch (err) {
+      sendResponse({ success: false, error: err.message });
+    }
+  })();
+  return true;
+}
   
   sendResponse({ error: 'Unknown message type' });
 });

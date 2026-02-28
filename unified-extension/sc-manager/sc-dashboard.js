@@ -142,31 +142,34 @@ class SCDashboard {
 
     // Fetch fresh data
     try {
-    // Find Metabase tab and use it as bridge
-    const tabs = await chrome.tabs.query({ url: 'https://metabase-main.bi.meeshogcp.in/*' });
-    
-    if (tabs.length === 0) {
-      this.showError('Please open Metabase in another tab first');
-      return;
-    }
-    
-    // Send message to Metabase tab
-    const result = await chrome.tabs.sendMessage(tabs[0].id, {
-      type: 'FETCH_METABASE_FROM_PAGE',
-      endpoint: queryConfig.endpoint
-    });
+  // Ask background script to find Metabase tab and fetch
+  const result = await chrome.runtime.sendMessage({
+    type: 'FETCH_METABASE_VIA_BRIDGE',
+    endpoint: queryConfig.endpoint
+  });
 
-    if (result.success) {
-      this.cache.set(metricKey, result);
-      this.renderMetricData(metricKey, result);
-      this.startAutoRefresh(metricKey);
-    } else {
-      this.showError(result.error);
-    }
-    
-  } catch (err) {
-    this.showError('Please login to Metabase in another tab');
+  if (result.error === 'NO_METABASE_TAB') {
+    this.showError(`
+      <p>📊 Metabase tab not found</p>
+      <p><a href="https://metabase-main.bi.meeshogcp.in/question/167151" target="_blank" style="color: #667eea; text-decoration: underline;">Open Metabase →</a></p>
+    `);
+    return;
   }
+
+  if (result.success) {
+    this.cache.set(metricKey, result);
+    this.renderMetricData(metricKey, result);
+    this.startAutoRefresh(metricKey);
+  } else {
+    this.showError(`
+      <p>🔒 ${result.error}</p>
+      <p><a href="https://metabase-main.bi.meeshogcp.in/question/167151" target="_blank" style="color: #667eea; text-decoration: underline;">Login to Metabase →</a></p>
+    `);
+  }
+  
+} catch (err) {
+  this.showError('Failed to fetch data: ' + err.message);
+}
   }
 
   /**
@@ -352,8 +355,7 @@ class SCDashboard {
       body.innerHTML = `
         <div class="error-state">
           <p>❌ ${message}</p>
-          <button onclick="location.reload()">Retry</button>
-        </div>
+          <button onclick="this.closest('.sc-manager-overlay').querySelector('#sc-refresh-btn').click()">Retry</button>S
       `;
     }
   }

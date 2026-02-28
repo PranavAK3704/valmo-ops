@@ -46,7 +46,9 @@
       "js": [
         "config.js",
         "sheets-sync.js",
-        "tat-system/ticket-tracker.js",
+        "process-progress.js",
+        "tat-system/tat-tracker-background.js",
+        "tat-system/tat-analytics.js",
         "tat-system/tat-dashboard-ui.js",
         "smart-chatbot.js",
         "sc-manager/metabase-queries.js",
@@ -68,7 +70,8 @@
     "https://console.valmo.in/*",
     "https://wfnmltorfvaokqbzggkn.supabase.co/*",
     "https://docs.google.com/*",
-    "https://api.groq.com/*"
+    "https://api.groq.com/*",
+    "https://sheets.googleapis.com/*"
 
   ],
 

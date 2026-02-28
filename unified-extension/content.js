@@ -74,6 +74,23 @@ async function init() {
   }
 }
 
+// ─── Inject appropriate overlay ───
+function injectOverlay() {
+  if (overlayInstance) return;
+  
+  const { role } = currentUser;
+  
+  if (role === 'Captain' && currentPlatform === 'log10') {
+    overlayInstance = new ProcessPulseOverlay();
+    overlayInstance.inject();
+  } else if (role === 'L1 Agent' && currentPlatform === 'kapture') {
+    overlayInstance = new L1ChatbotOverlayEnhanced();
+    overlayInstance.inject();
+  } else if (role === 'SC Manager' && currentPlatform === 'log10') {
+    overlayInstance = new SCManagerOverlay();
+  }
+}
+
 // ─── Should we show overlay? ───
 function shouldShowOverlay() {
   const { role } = currentUser;
@@ -86,19 +103,6 @@ function shouldShowOverlay() {
 }
 
 // ─── Inject appropriate overlay ───
-function injectOverlay() {
-  if (document.getElementById(OVERLAY_ID)) return;
-  
-  const { role } = currentUser;
-  
-  if (role === 'Captain' && currentPlatform === 'log10') {
-    overlayInstance = new ProcessPulseOverlay();
-  } else if (role === 'L1 Agent' && currentPlatform === 'kapture') {
-    overlayInstance = new L1ChatbotOverlayEnhanced();
-  } else if (role === 'SC Manager' && currentPlatform === 'log10') {
-    overlayInstance = new SCManagerOverlay();
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════
 // OVERLAY 1: Process Pulse (Captain on Log10) - UNCHANGED
@@ -1099,8 +1103,10 @@ class L1ChatbotOverlayEnhanced {
         });
         
         // Load TAT dashboard when tickets tab is clicked
-        if (tab === 'tickets' && typeof loadTATDashboard === 'function') {
-          loadTATDashboard();
+        if (tab === 'tickets') {
+          if (typeof loadTATDashboard === 'function') {
+            loadTATDashboard();
+          }
         }
         
         analytics.log('tab_switched', { tab });
@@ -1203,8 +1209,10 @@ if (document.readyState === 'loading') {
 // ═══════════════════════════════════════════════════════════════
 // TAT DASHBOARD INITIALIZATION
 // ═══════════════════════════════════════════════════════════════
+// TAT tracking now handled by tat-tracker-background.js
+// Dashboard UI injected by tat-dashboard-ui.js
 
-/*setTimeout(() => {
+setTimeout(() => {
   if (typeof injectTATDashboard === 'function') {
     console.log('[Valmo Ops] Injecting TAT Dashboard...');
     try {
@@ -1216,4 +1224,4 @@ if (document.readyState === 'loading') {
   } else {
     console.warn('[Valmo Ops] injectTATDashboard function not found');
   }
-}, 1500);*/
+}, 1500);

@@ -20,7 +20,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           headers: {
             'Content-Type': 'application/json'
           },
-          credentials: 'include' // Use existing Metabase session cookies
+          credentials: 'include', // Use existing Metabase session cookies
+          body: JSON.stringify({
+            parameters: []
+          })
         });
         
         if (!response.ok) {
