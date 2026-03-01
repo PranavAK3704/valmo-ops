@@ -39,6 +39,7 @@
       ],
       "css": [
         "styles/unified.css",
+        "styles/process-pulse-enhanced.css",
         "styles/captain-process-overlay.css",
         "tat-system/tat-dashboard.css",
         "sc-manager/sc-dashboard.css",
@@ -56,7 +57,8 @@
         "sc-manager/metabase-queries.js",
         "sc-manager/sc-dashboard.js",
         "sc-manager/sc-manager-overlay.js",
-        "content.js"
+        "content.js",
+        "process-pulse-enhanced.js"
       ],
       "run_at": "document_idle"
     },

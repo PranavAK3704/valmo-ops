@@ -1,0 +1,439 @@
+/**
+ * process-pulse-enhanced.css - PHASE 3 Styling
+ * 
+ * Styles for categorized Process Pulse sidebar
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+   PROGRESS STATS SECTION
+   ═══════════════════════════════════════════════════════════════ */
+
+.valmo-progress-stats {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.valmo-progress-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.valmo-progress-icon {
+  font-size: 18px;
+}
+
+.valmo-progress-bar-container {
+  margin-bottom: 12px;
+}
+
+.valmo-progress-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.valmo-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #48bb78, #38a169);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.valmo-progress-text {
+  font-size: 12px;
+  text-align: center;
+  opacity: 0.9;
+}
+
+.valmo-progress-alert {
+  background: rgba(252, 129, 129, 0.2);
+  border: 1px solid rgba(252, 129, 129, 0.4);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.valmo-progress-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.valmo-stat {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.valmo-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.valmo-stat-label {
+  font-size: 11px;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CATEGORY SECTIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+.valmo-category-section {
+  margin-bottom: 24px;
+}
+
+.valmo-category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.valmo-category-header.must-know {
+  background: linear-gradient(135deg, #fee 0%, #fdd 100%);
+  color: #c53030;
+  border: 1px solid #fc8181;
+}
+
+.valmo-category-header.good-to-know {
+  background: linear-gradient(135deg, #fefcbf 0%, #fef3c7 100%);
+  color: #744210;
+  border: 1px solid #ecc94b;
+}
+
+.valmo-category-header.this-week {
+  background: linear-gradient(135deg, #e6fffa 0%, #d6f5f5 100%);
+  color: #234e52;
+  border: 1px solid #81e6d9;
+}
+
+.valmo-category-icon {
+  font-size: 16px;
+}
+
+.valmo-category-title {
+  flex: 1;
+}
+
+.valmo-category-badge {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.valmo-category-count {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.valmo-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ENHANCED PROCESS CARDS
+   ═══════════════════════════════════════════════════════════════ */
+
+.valmo-process-card.enhanced {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+  transition: all 0.2s ease;
+}
+
+.valmo-process-card.enhanced:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.valmo-process-card.enhanced.completed {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.valmo-process-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.valmo-process-status {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.valmo-process-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a202c;
+  line-height: 1.4;
+}
+
+.valmo-badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.valmo-badge.new {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.valmo-badge.updated {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.valmo-process-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+
+.valmo-process-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.valmo-process-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.valmo-video-btn {
+  flex: 1;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.valmo-video-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.valmo-mark-complete-btn {
+  padding: 10px 16px;
+  background: white;
+  color: #48bb78;
+  border: 1.5px solid #48bb78;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.valmo-mark-complete-btn:hover {
+  background: #f0fdf4;
+  transform: scale(1.02);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPACT PROCESS CARDS (for time-based lists)
+   ═══════════════════════════════════════════════════════════════ */
+
+.valmo-category-list.compact {
+  gap: 8px;
+}
+
+.valmo-process-card-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: all 0.2s ease;
+}
+
+.valmo-process-card-compact:hover {
+  border-color: #cbd5e0;
+  background: #f7fafc;
+}
+
+.valmo-process-status-small {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.valmo-process-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.valmo-process-name-small {
+  font-size: 13px;
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.valmo-badge-small {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.valmo-badge-small.new {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.valmo-badge-small.updated {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.valmo-video-btn-small {
+  width: 32px;
+  height: 32px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.valmo-video-btn-small:hover {
+  background: #764ba2;
+  transform: scale(1.1);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VIEW ALL BUTTON (for empty state)
+   ═══════════════════════════════════════════════════════════════ */
+
+.valmo-view-all-btn {
+  margin-top: 16px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.valmo-view-all-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SUCCESS TOAST
+   ═══════════════════════════════════════════════════════════════ */
+
+.valmo-toast {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  padding: 14px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 999999;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.3s ease;
+}
+
+.valmo-toast.success {
+  background: #48bb78;
+  color: white;
+}
+
+.valmo-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 400px) {
+  .valmo-process-actions {
+    flex-direction: column;
+  }
+
+  .valmo-mark-complete-btn {
+    width: 100%;
+  }
+
+  .valmo-progress-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .valmo-stat-value {
+    font-size: 16px;
+  }
+
+  .valmo-stat-label {
+    font-size: 10px;
+  }
+}
