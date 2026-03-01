@@ -455,6 +455,14 @@ def main():
         process_name = row.get("process_name", "").strip()
         ppt_link     = row.get("ppt_link", "").strip()
         video_link   = row.get("video_link", "").strip()
+        
+        # PHASE 1: Read metadata columns from Training_Input
+        priority     = row.get("priority", "").strip() or "GOOD_TO_KNOW"
+        status       = row.get("status", "").strip() or "STABLE"
+        date_added   = row.get("date_added", "").strip() or "2026-02-28"
+        date_updated = row.get("date_updated", "").strip() or "2026-02-28"
+        version      = row.get("version", "").strip() or "1.0"
+        completion_required = row.get("completion_required", "").strip() or "FALSE"
 
         if not ppt_link:
             print(f"\n⚠️  Row {idx}: No PPT link, skipping")
@@ -473,6 +481,16 @@ def main():
         try:
             download_drive_file(ppt_link, temp_path)
             results = build_process_map(temp_path, video_link)
+            
+            # PHASE 1: Add metadata to each extracted process
+            for proc in results["log10"]:
+                proc["priority"] = priority
+                proc["status"] = status
+                proc["date_added"] = date_added
+                proc["date_updated"] = date_updated
+                proc["version"] = version
+                proc["completion_required"] = completion_required
+            
             all_log10.extend(results["log10"])
             all_external.extend(results["external"])
 
