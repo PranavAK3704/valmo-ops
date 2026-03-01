@@ -1,0 +1,380 @@
+/**
+ * captain-process-overlay.css
+ * Styles for process training interruption overlays
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+   OVERLAY CONTAINER
+   ═══════════════════════════════════════════════════════════════ */
+
+.captain-process-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.captain-process-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BACKDROP
+   ═══════════════════════════════════════════════════════════════ */
+
+.captain-process-overlay-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.captain-process-overlay-backdrop.blocking {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CONTENT CARD
+   ═══════════════════════════════════════════════════════════════ */
+
+.captain-process-overlay-content {
+  position: relative;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════════ */
+
+.captain-process-overlay-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 24px;
+  text-align: center;
+}
+
+.captain-process-overlay-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.captain-process-overlay-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BODY
+   ═══════════════════════════════════════════════════════════════ */
+
+.captain-process-overlay-body {
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.captain-process-overlay-process-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 16px 0;
+  line-height: 1.3;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BADGE
+   ═══════════════════════════════════════════════════════════════ */
+
+.captain-process-overlay-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.captain-process-overlay-badge.must-know {
+  background: #fee;
+  color: #c53030;
+  border: 2px solid #fc8181;
+}
+
+.captain-process-overlay-badge.good-to-know {
+  background: #fefcbf;
+  color: #744210;
+  border: 2px solid #ecc94b;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VERSION & DESCRIPTION
+   ═══════════════════════════════════════════════════════════════ */
+
+.captain-process-overlay-version {
+  font-size: 13px;
+  color: #718096;
+  margin-bottom: 16px;
+}
+
+.captain-process-overlay-description {
+  font-size: 15px;
+  color: #4a5568;
+  line-height: 1.6;
+  margin: 0 0 20px 0;
+}
+
+.captain-process-overlay-queue {
+  background: #edf2f7;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #2d3748;
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACTIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+.captain-process-overlay-actions {
+  padding: 0 24px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.captain-process-overlay-btn {
+  padding: 14px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.captain-process-overlay-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.captain-process-overlay-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.captain-process-overlay-btn-secondary {
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+}
+
+.captain-process-overlay-btn-secondary:hover {
+  background: #f7fafc;
+}
+
+.captain-process-overlay-btn-text {
+  background: transparent;
+  color: #718096;
+  padding: 8px;
+}
+
+.captain-process-overlay-btn-text:hover {
+  color: #2d3748;
+  background: #f7fafc;
+}
+
+.captain-process-overlay-warning {
+  text-align: center;
+  color: #c53030;
+  font-size: 13px;
+  margin: 8px 0 0 0;
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CLOSE BUTTON
+   ═══════════════════════════════════════════════════════════════ */
+
+.captain-process-overlay-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.captain-process-overlay-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VIDEO TRACKER (floating notification)
+   ═══════════════════════════════════════════════════════════════ */
+
+.captain-process-video-tracker {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999998;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.captain-process-video-tracker-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.captain-process-video-tracker-content span {
+  font-size: 14px;
+  color: #2d3748;
+  font-weight: 500;
+}
+
+.captain-process-video-tracker-complete {
+  padding: 8px 16px;
+  background: #48bb78;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.captain-process-video-tracker-complete:hover {
+  background: #38a169;
+  transform: scale(1.05);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SUCCESS MESSAGE
+   ═══════════════════════════════════════════════════════════════ */
+
+.captain-process-success {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 999999;
+  animation: slideInDown 0.3s ease;
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.captain-process-success.fade-out {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.captain-process-success-content {
+  background: #48bb78;
+  color: white;
+  padding: 16px 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 600px) {
+  .captain-process-overlay-content {
+    width: 95%;
+    max-width: none;
+  }
+
+  .captain-process-overlay-process-name {
+    font-size: 18px;
+  }
+
+  .captain-process-video-tracker {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+  }
+
+  .captain-process-video-tracker-content {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .captain-process-video-tracker-complete {
+    width: 100%;
+  }
+}

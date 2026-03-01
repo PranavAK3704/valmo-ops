@@ -39,6 +39,7 @@
       ],
       "css": [
         "styles/unified.css",
+        "styles/captain-process-overlay.css",
         "tat-system/tat-dashboard.css",
         "sc-manager/sc-dashboard.css",
         "sc-manager/sc-manager-overlay.css"
@@ -47,6 +48,7 @@
         "config.js",
         "sheets-sync.js",
         "process-progress.js",
+        "captain-process-overlay.js",
         "tat-system/tat-tracker-background.js",
         "tat-system/tat-analytics.js",
         "tat-system/tat-dashboard-ui.js",
