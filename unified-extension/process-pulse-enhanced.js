@@ -490,10 +490,27 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
         // Load all processes and show them
         chrome.runtime.sendMessage({ type: 'GET_ALL_PROCESSES' }, (response) => {
           if (response?.processes && response.processes.length > 0) {
+            console.log('[Phase 3] Received', response.processes.length, 'processes from API');
+            
             enhanced.allProcesses = response.processes;
             enhanced.matches = response.processes;
+            
+            // Call updateSidebar to trigger rendering
             enhanced.updateSidebar(response.processes);
+            
+            // Also directly call renderProcesses to be sure
+            setTimeout(() => {
+              const list = document.getElementById('valmo-process-list');
+              if (list) {
+                console.log('[Phase 3] Forcing render of processes...');
+                enhanced.renderProcesses(response.processes);
+                enhanced.renderProgressStats();
+              }
+            }, 100);
+            
             console.log('[Phase 3] ✅ Enhanced overlay injected with', response.processes.length, 'processes');
+          } else {
+            console.log('[Phase 3] ⚠️ No processes received from API');
           }
         });
       }
