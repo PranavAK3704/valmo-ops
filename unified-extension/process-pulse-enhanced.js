@@ -471,51 +471,42 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
     }
   }, 100);
   
-  // Clean up after 15 seconds
+   // Clean up after 15 seconds
   setTimeout(() => {
     clearInterval(patchInject);
     clearInterval(waitForClass);
     clearInterval(monitorInstance);
-    
-    // FINAL CHECK: If no overlay exists, create enhanced one
-    if (!window.overlayInstance && !document.getElementById('valmo-overlay')) {
-      console.log('[Phase 3] No overlay detected, injecting enhanced overlay...');
-      
-      // Check if we're on Log10
-      if (window.location.hostname.includes('console.valmo.in')) {
-        const enhanced = new ProcessPulseOverlayEnhanced();
-        enhanced.inject();
-        window.overlayInstance = enhanced;
-        
-        // Load all processes and show them
-        chrome.runtime.sendMessage({ type: 'GET_ALL_PROCESSES' }, (response) => {
-          if (response?.processes && response.processes.length > 0) {
-            console.log('[Phase 3] Received', response.processes.length, 'processes from API');
-            
-            enhanced.allProcesses = response.processes;
-            enhanced.matches = response.processes;
-            
-            // Call updateSidebar to trigger rendering
-            enhanced.updateSidebar(response.processes);
-            
-            // Also directly call renderProcesses to be sure
-            setTimeout(() => {
-              const list = document.getElementById('valmo-process-list');
-              if (list) {
-                console.log('[Phase 3] Forcing render of processes...');
-                enhanced.renderProcesses(response.processes);
-                enhanced.renderProgressStats();
-              }
-            }, 100);
-            
-            console.log('[Phase 3] ✅ Enhanced overlay injected with', response.processes.length, 'processes');
-          } else {
-            console.log('[Phase 3] ⚠️ No processes received from API');
-          }
-        });
-      }
+
+    // FINAL CHECK: Force enhanced UI rendering if DOM exists
+    const processList = document.getElementById('valmo-process-list');
+
+    if (processList) {
+      console.log('[Phase 3] Found process list, rendering enhanced UI...');
+
+      chrome.runtime.sendMessage({ type: 'GET_ALL_PROCESSES' }, async (response) => {
+        if (response?.processes && response.processes.length > 0) {
+          console.log('[Phase 3] Received', response.processes.length, 'processes, rendering...');
+
+          const temp = new ProcessPulseOverlayEnhanced();
+          temp.allProcesses = response.processes;
+          temp.matches = response.processes;
+
+          const userEmail =
+            localStorage.getItem('user_email') || 'captain@valmo.com';
+
+          await processProgress.init(userEmail);
+          temp.userProgress = processProgress;
+
+          temp.renderProcesses(response.processes);
+          temp.renderProgressStats();
+
+          console.log('[Phase 3] ✅ Enhanced UI rendered');
+        } else {
+          console.log('[Phase 3] ⚠️ No processes received from API');
+        }
+      });
     }
-    
+
     console.log('[Phase 3] Monitoring complete');
   }, 3000);
 })();
