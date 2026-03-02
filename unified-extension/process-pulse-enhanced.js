@@ -364,31 +364,117 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
   }
 }
 
-// Replace the original ProcessPulseOverlay with enhanced version
-if (typeof ProcessPulseOverlay !== 'undefined') {
-  // Store reference for "View All" button
-  window.processOverlayInstance = null;
+// ═══════════════════════════════════════════════════════════════
+// AUTO-REPLACEMENT - Makes this work without editing content.js
+// ═══════════════════════════════════════════════════════════════
 
-  // Override the injection
-  const originalInit = init;
-  window.init = async function() {
-    await originalInit();
-    
-    // Replace with enhanced version if it's a Captain on Log10
-    if (overlayInstance instanceof ProcessPulseOverlay) {
-      const enhanced = new ProcessPulseOverlayEnhanced();
-      // Copy state
-      enhanced.matches = overlayInstance.matches;
-      enhanced.isPanelOpen = overlayInstance.isPanelOpen;
+(function() {
+  console.log('[Phase 3] Initializing enhanced overlay system...');
+  
+  // Strategy 0: Patch ProcessPulseOverlay.inject() to expose instance globally
+  const patchInject = setInterval(() => {
+    if (typeof ProcessPulseOverlay !== 'undefined' && 
+        ProcessPulseOverlay.prototype.inject && 
+        !ProcessPulseOverlay.prototype.__exposed) {
       
-      // Replace instance
-      overlayInstance = enhanced;
-      window.processOverlayInstance = enhanced;
+      clearInterval(patchInject);
+      
+      const originalInject = ProcessPulseOverlay.prototype.inject;
+      
+      ProcessPulseOverlay.prototype.inject = function() {
+        console.log('[Phase 3] Inject called, exposing instance...');
+        const result = originalInject.apply(this, arguments);
+        
+        // Expose globally
+        window.overlayInstance = this;
+        window.processOverlayInstance = this;
+        
+        console.log('[Phase 3] ✅ Instance exposed globally:', this.constructor.name);
+        
+        return result;
+      };
+      
+      ProcessPulseOverlay.prototype.__exposed = true;
+      console.log('[Phase 3] ✅ Inject method patched to expose instance');
+    }
+  }, 10);
+  
+  // Strategy 1: Replace the ProcessPulseOverlay class BEFORE it's used
+  const waitForClass = setInterval(() => {
+    if (typeof ProcessPulseOverlay !== 'undefined' && !window.__phase3_replaced) {
+      clearInterval(waitForClass);
+      
+      console.log('[Phase 3] Found ProcessPulseOverlay class, replacing...');
+      
+      // Save original
+      window.OriginalProcessPulseOverlay = ProcessPulseOverlay;
+      
+      // Replace globally
+      window.ProcessPulseOverlay = ProcessPulseOverlayEnhanced;
+      window.__phase3_replaced = true;
+      
+      console.log('[Phase 3] ✅ Class replacement complete');
+    }
+  }, 50);
+  
+  // Strategy 2: Monitor overlayInstance and upgrade if needed
+  let lastInstance = null;
+  const monitorInstance = setInterval(() => {
+    const instance = window.overlayInstance;
+    
+    // Skip if no instance or already processed this instance
+    if (!instance || instance === lastInstance) return;
+    
+    // Skip if already enhanced
+    if (instance instanceof ProcessPulseOverlayEnhanced) {
+      console.log('[Phase 3] Instance is already enhanced ✅');
+      lastInstance = instance;
+      clearInterval(monitorInstance); // Stop monitoring
+      return;
+    }
+    
+    // Check if it's a basic ProcessPulseOverlay
+    if (instance.constructor.name === 'ProcessPulseOverlay' || 
+        (instance.matches !== undefined && instance.renderProcesses !== undefined)) {
+      
+      console.log('[Phase 3] Detected basic overlay instance, upgrading NOW...');
+      
+      // Create enhanced version
+      const enhanced = new ProcessPulseOverlayEnhanced();
+      
+      // Copy all state
+      enhanced.matches = instance.matches || [];
+      enhanced.isPanelOpen = instance.isPanelOpen || false;
+      
+      // Replace global reference
+      window.overlayInstance = enhanced;
+      lastInstance = enhanced;
+      
+      // Re-attach event listeners with enhanced version
+      enhanced.attachListeners();
       
       // Re-render with enhanced UI
-      if (enhanced.matches.length > 0) {
-        enhanced.renderProcesses(enhanced.matches);
-      }
+      setTimeout(() => {
+        const list = document.getElementById('valmo-process-list');
+        if (list) {
+          console.log('[Phase 3] Re-rendering with enhanced UI...');
+          enhanced.renderProcesses(enhanced.matches);
+          
+          // Initialize progress tracking
+          enhanced.initProgressTracking();
+          
+          console.log('[Phase 3] ✅ Enhanced UI active!');
+        }
+      }, 200);
+      
+      console.log('[Phase 3] ✅ Instance upgraded to enhanced version');
     }
-  };
-}
+  }, 100);
+  
+  // Clean up after 15 seconds
+  setTimeout(() => {
+    clearInterval(waitForClass);
+    clearInterval(monitorInstance);
+    console.log('[Phase 3] Monitoring complete');
+  }, 15000);
+})();
