@@ -38,7 +38,6 @@ from platform_detector import detect_platform
 # ═══════════════════════════════════════════════════════════════
 
 SHEET_ID            = os.environ["SHEET_ID"]
-SHEET_INPUT_CSV_URL = os.environ["SHEET_INPUT_CSV_URL"]
 SA_JSON             = os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]
 
 INPUT_TAB_NAME  = "Training_Input"
@@ -113,12 +112,17 @@ def write_results_to_sheet(all_log10):
 
 
 def fetch_input_rows():
-    """Fetches rows from published Training_Input CSV."""
-    print("🌐 Fetching input rows from Google Sheets...")
-    response = requests.get(SHEET_INPUT_CSV_URL, timeout=15)
-    response.raise_for_status()
-    reader = csv.DictReader(StringIO(response.text))
-    rows   = list(reader)
+    """Fetches rows from Training_Input sheet using service account."""
+    print("🌐 Fetching input rows from Google Sheets (via service account)...")
+    
+    # Use service account to access sheet
+    client = get_sheets_client()
+    sheet = client.open_by_key(SHEET_ID)
+    worksheet = sheet.worksheet(INPUT_TAB_NAME)
+    
+    # Get all records as dictionaries
+    rows = worksheet.get_all_records()
+    
     print(f"✅ Retrieved {len(rows)} rows")
     return rows
 
@@ -455,14 +459,6 @@ def main():
         process_name = row.get("process_name", "").strip()
         ppt_link     = row.get("ppt_link", "").strip()
         video_link   = row.get("video_link", "").strip()
-        
-        # PHASE 1: Read metadata columns from Training_Input
-        priority     = row.get("priority", "").strip() or "GOOD_TO_KNOW"
-        status       = row.get("status", "").strip() or "STABLE"
-        date_added   = row.get("date_added", "").strip() or "2026-02-28"
-        date_updated = row.get("date_updated", "").strip() or "2026-02-28"
-        version      = row.get("version", "").strip() or "1.0"
-        completion_required = row.get("completion_required", "").strip() or "FALSE"
 
         if not ppt_link:
             print(f"\n⚠️  Row {idx}: No PPT link, skipping")
@@ -481,16 +477,6 @@ def main():
         try:
             download_drive_file(ppt_link, temp_path)
             results = build_process_map(temp_path, video_link)
-            
-            # PHASE 1: Add metadata to each extracted process
-            for proc in results["log10"]:
-                proc["priority"] = priority
-                proc["status"] = status
-                proc["date_added"] = date_added
-                proc["date_updated"] = date_updated
-                proc["version"] = version
-                proc["completion_required"] = completion_required
-            
             all_log10.extend(results["log10"])
             all_external.extend(results["external"])
 

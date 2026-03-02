@@ -30,7 +30,6 @@ from google.oauth2.service_account import Credentials
 # ═══════════════════════════════════════════════════════════════
 
 SHEET_ID = os.environ["SHEET_ID"]
-SHEET_INPUT_CSV_URL = os.environ["SHEET_INPUT_CSV_URL"]
 SA_JSON = os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]
 GROQ_API_KEY = os.environ["GROQ_API_KEY"]  # Add this to GitHub Secrets
 
@@ -61,13 +60,17 @@ def get_sheets_client():
 # ═══════════════════════════════════════════════════════════════
 
 def fetch_input_rows():
-    """Fetch rows from Training_Input sheet"""
-    print("📥 Fetching Training_Input rows...")
-    response = requests.get(SHEET_INPUT_CSV_URL, timeout=15)
-    response.raise_for_status()
+    """Fetch rows from Training_Input sheet using service account"""
+    print("📥 Fetching Training_Input rows from Google Sheets...")
     
-    reader = csv.DictReader(StringIO(response.text))
-    rows = list(reader)
+    # Use service account to access sheet
+    client = get_sheets_client()
+    sheet = client.open_by_key(SHEET_ID)
+    worksheet = sheet.worksheet(INPUT_TAB_NAME)
+    
+    # Get all records as dictionaries
+    rows = worksheet.get_all_records()
+    
     print(f"✅ Retrieved {len(rows)} rows")
     return rows
 

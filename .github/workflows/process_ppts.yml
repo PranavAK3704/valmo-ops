@@ -29,14 +29,12 @@ jobs:
       - name: Run PPT processor
         env:
           SHEET_ID:                     ${{ secrets.SHEET_ID }}
-          SHEET_INPUT_CSV_URL:          ${{ secrets.SHEET_INPUT_CSV_URL }}
           GOOGLE_SERVICE_ACCOUNT_JSON:  ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         run: python scripts/process_and_sync.py
 
       - name: Generate assessment questions
         env:
           SHEET_ID:                     ${{ secrets.SHEET_ID }}
-          SHEET_INPUT_CSV_URL:          ${{ secrets.SHEET_INPUT_CSV_URL }}
           GOOGLE_SERVICE_ACCOUNT_JSON:  ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           GROQ_API_KEY:                 ${{ secrets.GROQ_API_KEY }}
         run: python scripts/assessment-generator.py
