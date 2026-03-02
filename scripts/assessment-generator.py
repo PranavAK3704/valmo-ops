@@ -445,7 +445,7 @@ def main():
     for idx, row in enumerate(rows, start=1):
         process_name = row.get("process_name", "").strip()
         ppt_link = row.get("ppt_link", "").strip()
-        version = row.get("version", "1.0").strip()
+        version = str(row.get("version", "1.0")).strip()
         
         if not ppt_link or not process_name:
             print(f"\n⚠️  Row {idx}: Missing data, skipping")
