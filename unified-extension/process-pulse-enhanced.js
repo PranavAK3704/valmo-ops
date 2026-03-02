@@ -473,8 +473,32 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
   
   // Clean up after 15 seconds
   setTimeout(() => {
+    clearInterval(patchInject);
     clearInterval(waitForClass);
     clearInterval(monitorInstance);
+    
+    // FINAL CHECK: If no overlay exists, create enhanced one
+    if (!window.overlayInstance && !document.getElementById('valmo-overlay')) {
+      console.log('[Phase 3] No overlay detected, injecting enhanced overlay...');
+      
+      // Check if we're on Log10
+      if (window.location.hostname.includes('console.valmo.in')) {
+        const enhanced = new ProcessPulseOverlayEnhanced();
+        enhanced.inject();
+        window.overlayInstance = enhanced;
+        
+        // Load all processes and show them
+        chrome.runtime.sendMessage({ type: 'GET_ALL_PROCESSES' }, (response) => {
+          if (response?.processes && response.processes.length > 0) {
+            enhanced.allProcesses = response.processes;
+            enhanced.matches = response.processes;
+            enhanced.updateSidebar(response.processes);
+            console.log('[Phase 3] ✅ Enhanced overlay injected with', response.processes.length, 'processes');
+          }
+        });
+      }
+    }
+    
     console.log('[Phase 3] Monitoring complete');
-  }, 15000);
+  }, 3000);
 })();
