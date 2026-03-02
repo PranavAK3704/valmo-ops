@@ -49,8 +49,6 @@
         "config.js",
         "sheets-sync.js",
         "process-progress.js",
-        "gamification/gamification-system.js",     
-        "gamification/assessment-system.js",
         "captain-process-overlay.js",
         "tat-system/tat-tracker-background.js",
         "tat-system/tat-analytics.js",
