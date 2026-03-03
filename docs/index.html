@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Valmo Training Hub - Level Up Your Skills</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <h2>Loading Your Training Hub...</h2>
+      <p>Preparing your personalized dashboard</p>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <div id="main-container" class="main-container hidden">
+    
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">
+          <div class="logo-icon">🚀</div>
+          <div class="logo-text">
+            <h1>Valmo Training Hub</h1>
+            <p>Level Up Your Skills</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="header-right">
+        <div class="user-profile">
+          <div class="user-avatar" id="user-avatar">
+            <span id="user-initials">?</span>
+          </div>
+          <div class="user-info">
+            <div class="user-name" id="user-name">Loading...</div>
+            <div class="user-rank" id="user-rank">Rookie</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="dashboard">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Dashboard</span>
+      </button>
+      <button class="nav-tab" data-tab="training">
+        <span class="nav-icon">📚</span>
+        <span class="nav-label">Training</span>
+      </button>
+      <button class="nav-tab" data-tab="leaderboard">
+        <span class="nav-icon">🏆</span>
+        <span class="nav-label">Leaderboard</span>
+      </button>
+      <button class="nav-tab" data-tab="games">
+        <span class="nav-icon">🎮</span>
+        <span class="nav-label">Games</span>
+      </button>
+      <button class="nav-tab" data-tab="achievements">
+        <span class="nav-icon">🏅</span>
+        <span class="nav-label">Achievements</span>
+      </button>
+      <button class="nav-tab" data-tab="jarvis">
+        <span class="nav-icon">🤖</span>
+        <span class="nav-label">Ask Jarvis</span>
+      </button>
+    </nav>
+
+    <!-- Tab Content -->
+    <main class="content">
+      
+      <!-- DASHBOARD TAB -->
+      <section id="dashboard-tab" class="tab-content active">
+        <div class="dashboard-grid">
+          
+          <!-- Profile Card -->
+          <div class="card profile-card">
+            <div class="profile-header">
+              <div class="profile-avatar-large" id="profile-avatar-large">
+                <span id="profile-initials">?</span>
+              </div>
+              <div class="profile-details">
+                <h2 id="profile-name">Loading...</h2>
+                <div class="profile-email" id="profile-email">loading@email.com</div>
+              </div>
+            </div>
+            
+            <div class="level-display">
+              <div class="level-header">
+                <span class="level-label">Level</span>
+                <span class="level-number" id="level-number">1</span>
+              </div>
+              <div class="level-rank" id="level-rank">🆕 Rookie</div>
+            </div>
+            
+            <div class="xp-container">
+              <div class="xp-header">
+                <span class="xp-label">Experience Points</span>
+                <span class="xp-value" id="xp-value">0 / 100 XP</span>
+              </div>
+              <div class="xp-bar">
+                <div class="xp-bar-fill" id="xp-bar-fill" style="width: 0%"></div>
+              </div>
+              <div class="xp-next-level" id="xp-next-level">100 XP to Level 2</div>
+            </div>
+          </div>
+
+          <!-- Stats Overview -->
+          <div class="card stats-card">
+            <h3>📊 Your Statistics</h3>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <div class="stat-icon">📹</div>
+                <div class="stat-details">
+                  <div class="stat-label">Videos Watched</div>
+                  <div class="stat-value" id="stat-videos">0 / 0</div>
+                </div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-icon">📝</div>
+                <div class="stat-details">
+                  <div class="stat-label">Assessments Passed</div>
+                  <div class="stat-value" id="stat-assessments">0 / 0</div>
+                </div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-icon">💯</div>
+                <div class="stat-details">
+                  <div class="stat-label">Average Score</div>
+                  <div class="stat-value" id="stat-avg-score">0%</div>
+                </div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-icon">🔥</div>
+                <div class="stat-details">
+                  <div class="stat-label">Current Streak</div>
+                  <div class="stat-value" id="stat-streak">0 days</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Activity -->
+          <div class="card activity-card">
+            <h3>⚡ Recent Activity</h3>
+            <div class="activity-list" id="activity-list">
+              <div class="activity-empty">
+                <div class="activity-empty-icon">📭</div>
+                <p>No recent activity</p>
+                <small>Complete training to see your progress here</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="card quick-actions-card">
+            <h3>🚀 Quick Actions</h3>
+            <div class="quick-actions">
+              <button class="quick-action-btn" onclick="switchTab('training')">
+                <span class="qa-icon">📚</span>
+                <span class="qa-text">Start Training</span>
+              </button>
+              <button class="quick-action-btn" onclick="switchTab('leaderboard')">
+                <span class="qa-icon">🏆</span>
+                <span class="qa-text">View Leaderboard</span>
+              </button>
+              <button class="quick-action-btn" onclick="switchTab('games')">
+                <span class="qa-icon">🎮</span>
+                <span class="qa-text">Play Games</span>
+              </button>
+              <button class="quick-action-btn" onclick="switchTab('jarvis')">
+                <span class="qa-icon">🤖</span>
+                <span class="qa-text">Ask Jarvis</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- TRAINING TAB -->
+      <section id="training-tab" class="tab-content">
+        <div class="training-container">
+          
+          <div class="training-header">
+            <h2>📚 Your Training Path</h2>
+            <div class="training-filters">
+              <button class="filter-btn active" data-filter="all">All</button>
+              <button class="filter-btn" data-filter="must-know">🔴 Must Know</button>
+              <button class="filter-btn" data-filter="good-to-know">🟡 Good to Know</button>
+              <button class="filter-btn" data-filter="completed">✅ Completed</button>
+              <button class="filter-btn" data-filter="pending">⏳ Pending</button>
+            </div>
+          </div>
+
+          <!-- Process List -->
+          <div class="process-list" id="process-list">
+            <div class="loading-processes">
+              <div class="loading-spinner-small"></div>
+              <p>Loading training processes...</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- LEADERBOARD TAB -->
+      <section id="leaderboard-tab" class="tab-content">
+        <div class="leaderboard-container">
+          <div class="leaderboard-header">
+            <h2>🏆 Leaderboard</h2>
+            <div class="leaderboard-period">
+              <button class="period-btn active" data-period="all-time">All Time</button>
+              <button class="period-btn" data-period="month">This Month</button>
+              <button class="period-btn" data-period="week">This Week</button>
+            </div>
+          </div>
+
+          <!-- Your Rank -->
+          <div class="your-rank-card" id="your-rank-card">
+            <div class="your-rank-content">
+              <div class="your-rank-position">
+                <span class="rank-label">Your Rank</span>
+                <span class="rank-number" id="your-rank-number">-</span>
+              </div>
+              <div class="your-rank-details">
+                <div class="your-rank-xp" id="your-rank-xp">0 XP</div>
+                <div class="your-rank-behind" id="your-rank-behind">-</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Leaderboard Table -->
+          <div class="leaderboard-table-container">
+            <table class="leaderboard-table" id="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Name</th>
+                  <th>Level</th>
+                  <th>XP</th>
+                  <th>Videos</th>
+                  <th>Assessments</th>
+                  <th>Streak</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-tbody">
+                <tr>
+                  <td colspan="7" class="leaderboard-loading">
+                    <div class="loading-spinner-small"></div>
+                    <p>Loading leaderboard...</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- GAMES TAB -->
+      <section id="games-tab" class="tab-content">
+        <div class="games-container">
+          <div class="games-header">
+            <h2>🎮 Training Games</h2>
+            <p>Make learning fun with interactive challenges!</p>
+          </div>
+
+          <div class="games-grid">
+            <!-- Coming Soon Games -->
+            <div class="game-card coming-soon">
+              <div class="game-icon">🎯</div>
+              <h3>Process Quiz Challenge</h3>
+              <p>Test your knowledge in rapid-fire quizzes</p>
+              <div class="game-badge">Coming Soon</div>
+            </div>
+
+            <div class="game-card coming-soon">
+              <div class="game-icon">⏱️</div>
+              <h3>Speed Training</h3>
+              <p>Complete processes under time pressure</p>
+              <div class="game-badge">Coming Soon</div>
+            </div>
+
+            <div class="game-card coming-soon">
+              <div class="game-icon">🧩</div>
+              <h3>Process Flow Puzzle</h3>
+              <p>Arrange steps in the correct order</p>
+              <div class="game-badge">Coming Soon</div>
+            </div>
+
+            <div class="game-card coming-soon">
+              <div class="game-icon">🏁</div>
+              <h3>Training Marathon</h3>
+              <p>Complete multiple processes in sequence</p>
+              <div class="game-badge">Coming Soon</div>
+            </div>
+          </div>
+
+          <!-- Game Leaderboard Placeholder -->
+          <div class="game-leaderboard-placeholder">
+            <h3>🏆 Game Leaderboard</h3>
+            <p>High scores and achievements will appear here once games are launched</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ACHIEVEMENTS TAB -->
+      <section id="achievements-tab" class="tab-content">
+        <div class="achievements-container">
+          <div class="achievements-header">
+            <h2>🏅 Achievements</h2>
+            <div class="achievements-progress">
+              <span id="achievements-unlocked">0</span> / <span id="achievements-total">7</span> Unlocked
+            </div>
+          </div>
+
+          <div class="achievements-grid" id="achievements-grid">
+            <!-- Achievements will be loaded dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- JARVIS TAB -->
+      <section id="jarvis-tab" class="tab-content">
+        <div class="jarvis-container">
+          <div class="jarvis-header">
+            <div class="jarvis-icon">🤖</div>
+            <div>
+              <h2>Ask Jarvis AI</h2>
+              <p>Your intelligent training assistant</p>
+            </div>
+          </div>
+
+          <div class="jarvis-redirect-card">
+            <div class="jarvis-features">
+              <h3>What Jarvis Can Help With:</h3>
+              <ul>
+                <li>✓ Answer questions about processes</li>
+                <li>✓ Explain complex procedures step-by-step</li>
+                <li>✓ Provide examples and scenarios</li>
+                <li>✓ Help you prepare for assessments</li>
+                <li>✓ Clarify doubts in real-time</li>
+              </ul>
+            </div>
+
+            <button class="jarvis-open-btn" onclick="openJarvis()">
+              <span>🚀</span>
+              Open Jarvis AI Assistant
+            </button>
+
+            <div class="jarvis-note">
+              Opens in a new tab for the best experience
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="api.js"></script>
+  <script src="dashboard.js"></script>
+  <script src="assessment.js"></script>
+</body>
+</html>
