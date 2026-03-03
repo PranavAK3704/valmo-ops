@@ -42,9 +42,11 @@
         "styles/process-pulse-enhanced.css",
         "styles/captain-process-overlay.css",
         "gamification/my-stats-tab.css",
+        "styles/metrics-dashboard.css",
         "tat-system/tat-dashboard.css",
         "sc-manager/sc-dashboard.css",
-        "sc-manager/sc-manager-overlay.css"
+        "sc-manager/sc-manager-overlay.css",
+        "styles/gamification.css"
       ],
       "js": [
         "config.js",
@@ -52,6 +54,8 @@
         "process-progress.js",
         "gamification/gamification-system.js",
         "gamification/my-stats-tab.js",
+        "gamification/snooze-feature.js",      
+        "gamification/metrics-dashboard.js",
         "captain-process-overlay.js",
         "tat-system/tat-tracker-background.js",
         "tat-system/tat-analytics.js",

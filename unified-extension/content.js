@@ -105,6 +105,23 @@ async function init() {
     } else {
       console.warn('[Gamification] myStatsTab not loaded');
     }
+
+    // Initialize Metrics Dashboard
+    if (window.metricsDashboard) {
+      try {
+        await window.metricsDashboard.init(currentUser.email);
+
+        // Wait for sidebar to be ready, then inject metrics tab
+        setTimeout(() => {
+          window.metricsDashboard.injectDashboard();
+          console.log('[Gamification] ✅ Metrics dashboard injected');
+        }, 600);
+      } catch (error) {
+        console.error('[Gamification] Metrics init error:', error);
+      }
+    } else {
+      console.warn('[Gamification] metricsDashboard not loaded');
+    }
   }
 }
 
