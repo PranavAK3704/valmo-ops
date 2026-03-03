@@ -76,16 +76,17 @@ async function init() {
   if (currentUser.role === 'Captain' && currentPlatform === 'log10') {
     console.log('[Gamification] Initializing for Captain...');
 
-    //Initialize gamification system
-    if (window.gamificationSystem) {
+    // Initialize gamification system
+    if (typeof window.gamificationSystem !== 'undefined' && 
+        typeof window.gamificationSystem.init === 'function') {
       try {
-        await window.gamification.init(currentUser.email);
+        await window.gamificationSystem.init(currentUser.email);
         console.log('[Gamification] ✅ System initialized');
-      } catch  (error) {
+      } catch (error) {
         console.error('[Gamification] Init error:', error);
       }
     } else {
-      console.warn('[Gamification] gamificationSystem not loaded');
+      console.warn('[Gamification] gamificationSystem not ready yet');
     }
 
     // Initialize My Stats tab

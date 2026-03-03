@@ -226,7 +226,7 @@ class MyStatsTab {
 
         <!-- Quick Links -->
         <div class="mystats-quick-links">
-          <button class="mystats-quick-link" onclick="window.overlayInstance.openPanel(); window.overlayInstance.switchToTab('videos')">
+          <button class="mystats-quick-link" id="browse-training-btn">
             📚 Browse Training
           </button>
           <button class="mystats-quick-link" id="refresh-stats-btn">
@@ -251,6 +251,24 @@ class MyStatsTab {
         
         statsBtn.classList.add('active');
         document.getElementById('mystats-view').classList.add('active');
+      });
+    }
+
+    // Browse Training button
+    const browseBtn = document.getElementById('browse-training-btn');
+    if (browseBtn) {
+      browseBtn.addEventListener('click', () => {
+        // Switch to Videos tab
+        const videosTab = document.querySelector('[data-tab="videos"]');
+        if (videosTab) {
+          videosTab.click();
+        }
+        
+        // Open the panel if it's not already open
+        const panel = document.getElementById('valmo-panel');
+        if (panel && !panel.classList.contains('open')) {
+          panel.classList.add('open');
+        }
       });
     }
 
