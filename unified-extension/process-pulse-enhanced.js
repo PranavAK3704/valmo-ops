@@ -510,3 +510,193 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
     console.log('[Phase 3] Monitoring complete');
   }, 3000);
 })();
+
+/**
+ * EMERGENCY PATCH - Add to process-pulse-enhanced.js
+ * 
+ * This fixes:
+ * 1. Expose overlayInstance globally
+ * 2. Fix play button handlers
+ * 3. Fix complete button handlers
+ * 4. Fix browse training button
+ */
+
+// Add this at the END of process-pulse-enhanced.js file:
+
+(function() {
+  console.log('[PATCH] Applying emergency fixes...');
+
+  // Wait for DOM and overlay to be ready
+  setTimeout(() => {
+    
+    // ═══════════════════════════════════════════════════════════════
+    // FIX 1: Expose overlay instance globally
+    // ═══════════════════════════════════════════════════════════════
+    
+    const panel = document.getElementById('valmo-panel');
+    if (panel && !window.overlayInstance) {
+      // Create a minimal overlay instance for backward compatibility
+      window.overlayInstance = {
+        openPanel: () => {
+          const p = document.getElementById('valmo-panel');
+          if (p) p.classList.add('open');
+        },
+        closePanel: () => {
+          const p = document.getElementById('valmo-panel');
+          if (p) p.classList.remove('open');
+        },
+        switchToTab: (tabName) => {
+          const tab = document.querySelector(`[data-tab="${tabName}"]`);
+          if (tab) tab.click();
+        }
+      };
+      console.log('[PATCH] ✅ Created window.overlayInstance');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // FIX 2 & 3: Add click handlers for all buttons
+    // ═══════════════════════════════════════════════════════════════
+    
+    // Get process list container
+    const processList = document.getElementById('valmo-process-list');
+    if (!processList) {
+      console.warn('[PATCH] Process list not found');
+      return;
+    }
+
+    // Add event delegation for all clicks
+    processList.addEventListener('click', async (e) => {
+      
+      // ═══════════════════════════════════════════════════════════
+      // PLAY BUTTON (Watch Video)
+      // ═══════════════════════════════════════════════════════════
+      
+      const playBtn = e.target.closest('.valmo-video-btn, .valmo-video-btn-small');
+      if (playBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const processName = playBtn.dataset.processName || playBtn.getAttribute('data-process-name');
+        const videoLink = playBtn.dataset.videoLink || playBtn.getAttribute('data-video-link');
+        
+        console.log('[PATCH] Play button clicked:', processName, videoLink);
+        
+        if (videoLink) {
+          // Open video
+          window.open(videoLink, '_blank');
+          
+          // Award XP if gamification is ready
+          if (window.gamificationSystem && window.gamificationSystem.initialized) {
+            try {
+              await window.gamificationSystem.watchVideo(processName, false, false);
+              console.log('[PATCH] ✅ XP awarded for watching video');
+            } catch (err) {
+              console.warn('[PATCH] Could not award XP:', err);
+            }
+          }
+        } else {
+          console.warn('[PATCH] No video link found');
+        }
+        
+        return;
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // COMPLETE BUTTON (Mark Complete)
+      // ═══════════════════════════════════════════════════════════
+      
+      const completeBtn = e.target.closest('.valmo-complete-btn');
+      if (completeBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const processName = completeBtn.dataset.processName || completeBtn.getAttribute('data-process-name');
+        const version = completeBtn.dataset.processVersion || completeBtn.getAttribute('data-process-version');
+        const videoLink = completeBtn.dataset.videoLink || completeBtn.getAttribute('data-video-link');
+        
+        console.log('[PATCH] Complete button clicked:', processName);
+        
+        // Mark as completed in process progress
+        if (window.processProgress) {
+          try {
+            await window.processProgress.markCompleted(processName, version, videoLink);
+            console.log('[PATCH] ✅ Marked as completed');
+            
+            // Refresh the UI
+            window.location.reload();
+          } catch (err) {
+            console.error('[PATCH] Error marking complete:', err);
+          }
+        } else {
+          console.warn('[PATCH] processProgress not available');
+        }
+        
+        return;
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // THIS WEEK PLAY BUTTON (bottom section)
+      // ═══════════════════════════════════════════════════════════
+      
+      const thisWeekPlayBtn = e.target.closest('.valmo-thisweek-play');
+      if (thisWeekPlayBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const processName = thisWeekPlayBtn.dataset.processName || thisWeekPlayBtn.getAttribute('data-process-name');
+        const videoLink = thisWeekPlayBtn.dataset.videoLink || thisWeekPlayBtn.getAttribute('data-video-link');
+        
+        console.log('[PATCH] This Week play clicked:', processName, videoLink);
+        
+        if (videoLink) {
+          window.open(videoLink, '_blank');
+          
+          // Award XP
+          if (window.gamificationSystem && window.gamificationSystem.initialized) {
+            try {
+              await window.gamificationSystem.watchVideo(processName, false, false);
+            } catch (err) {
+              console.warn('[PATCH] Could not award XP:', err);
+            }
+          }
+        }
+        
+        return;
+      }
+
+    });
+
+    console.log('[PATCH] ✅ Event delegation added to process list');
+
+    // ═══════════════════════════════════════════════════════════════
+    // FIX 4: Fix Browse Training button in My Stats
+    // ═══════════════════════════════════════════════════════════════
+    
+    // This will be handled by the updated my-stats-tab.js
+    // But add a backup handler just in case
+    document.addEventListener('click', (e) => {
+      if (e.target.id === 'browse-training-btn' || 
+          e.target.closest('#browse-training-btn')) {
+        e.preventDefault();
+        
+        // Switch to Videos tab
+        const videosTab = document.querySelector('[data-tab="videos"]');
+        if (videosTab) {
+          videosTab.click();
+        }
+        
+        // Open panel
+        const panel = document.getElementById('valmo-panel');
+        if (panel && !panel.classList.contains('open')) {
+          panel.classList.add('open');
+        }
+        
+        console.log('[PATCH] ✅ Browse Training clicked');
+      }
+    });
+
+  }, 1000); // Wait 1 second for everything to load
+
+})();
+
+console.log('[PATCH] Emergency patch loaded');
