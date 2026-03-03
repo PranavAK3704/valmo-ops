@@ -41,6 +41,7 @@
         "styles/unified.css",
         "styles/process-pulse-enhanced.css",
         "styles/captain-process-overlay.css",
+        "gamification/my-stats-tab.css",
         "tat-system/tat-dashboard.css",
         "sc-manager/sc-dashboard.css",
         "sc-manager/sc-manager-overlay.css"
@@ -49,6 +50,8 @@
         "config.js",
         "sheets-sync.js",
         "process-progress.js",
+        "gamification/gamification-system.js",
+        "gamification/my-stats-tab.js",
         "captain-process-overlay.js",
         "tat-system/tat-tracker-background.js",
         "tat-system/tat-analytics.js",

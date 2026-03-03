@@ -72,6 +72,39 @@ async function init() {
   if (shouldShowOverlay()) {
     injectOverlay();
   }
+
+  if (currentUser.role === 'Captain' && currentPlatform === 'log10') {
+    console.log('[Gamification] Initializing for Captain...');
+
+    //Initialize gamification system
+    if (window.gamificationSystem) {
+      try {
+        await window.gamification.init(currentUser.email);
+        console.log('[Gamification] ✅ System initialized');
+      } catch  (error) {
+        console.error('[Gamification] Init error:', error);
+      }
+    } else {
+      console.warn('[Gamification] gamificationSystem not loaded');
+    }
+
+    // Initialize My Stats tab
+    if (window.myStatsTab) {
+      try {
+        await window.myStatsTab.init(currentUser.email);
+
+        //wait a moment for the sidebar to be injected, then add the stats tab
+        setTimeout(() => {
+          window.myStatsTab.injectTab();
+          console.log('[Gamification] ✅ My Stats tab injected');
+        }, 500);
+      } catch (error) {
+        console.error('[Gamification] My Stats init error:', error);
+      }
+    } else {
+      console.warn('[Gamification] myStatsTab not loaded');
+    }
+  }
 }
 
 // ─── Inject appropriate overlay ───
