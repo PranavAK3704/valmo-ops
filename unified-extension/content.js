@@ -122,6 +122,18 @@ async function init() {
     } else {
       console.warn('[Gamification] metricsDashboard not loaded');
     }
+
+    // Initialize Captain Timer System
+    if (window.captainTimerSystem) {
+      try {
+        await window.captainTimerSystem.init(currentUser.email);
+        console.log('[Captain Timer] ✅ System initialized');
+      } catch (error) {
+        console.error('[Captain Timer] Init error:', error);
+      }
+    } else {
+      console.warn('[Captain Timer] captainTimerSystem not loaded');
+    }
   }
 }
 

@@ -1,0 +1,122 @@
+/**
+ * captain-timer-notification.css - Next Process Notification Styling
+ */
+
+.captain-next-process-notification {
+  position: fixed;
+  bottom: -200px;
+  right: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  z-index: 999999;
+  min-width: 350px;
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  opacity: 0;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.captain-next-process-notification.visible {
+  bottom: 20px;
+  opacity: 1;
+}
+
+.captain-next-process-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  position: relative;
+}
+
+.captain-next-process-icon {
+  font-size: 40px;
+  flex-shrink: 0;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.captain-next-process-text {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.captain-next-process-text strong {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.captain-next-process-text span {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.captain-next-process-start {
+  background: white;
+  color: #667eea;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.captain-next-process-start:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: #f0f0f0;
+}
+
+.captain-next-process-start:active {
+  transform: translateY(0);
+}
+
+.captain-next-process-dismiss {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.captain-next-process-dismiss:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.6), 0 0 20px rgba(102, 126, 234, 0.4);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
