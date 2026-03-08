@@ -1,0 +1,349 @@
+/**
+ * process-timer-tab.css - Captain Process Timer Tab Styling
+ */
+
+/* ============================================
+   SEARCH SECTION
+   ============================================ */
+
+.timer-search-section {
+  position: relative;
+  padding: 15px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.timer-search-input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.timer-search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.timer-search-results {
+  position: absolute;
+  top: 70px;
+  left: 15px;
+  right: 15px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+}
+
+.timer-search-result {
+  padding: 12px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s;
+}
+
+.timer-search-result:last-child {
+  border-bottom: none;
+}
+
+.timer-search-result:hover {
+  background: #f8f9fa;
+}
+
+.timer-search-result-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.timer-search-result-meta {
+  font-size: 12px;
+  color: #666;
+}
+
+.timer-search-empty {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+}
+
+/* ============================================
+   ACTIVE PROCESS CARD
+   ============================================ */
+
+.timer-active-card {
+  margin: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.timer-active-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.timer-active-icon {
+  font-size: 24px;
+}
+
+.timer-active-title {
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.timer-display {
+  font-size: 48px;
+  font-weight: 700;
+  text-align: center;
+  margin: 20px 0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+}
+
+.timer-status {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.timer-status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.timer-status-badge.running {
+  background: rgba(76, 175, 80, 0.3);
+}
+
+.timer-status-badge.paused {
+  background: rgba(255, 152, 0, 0.3);
+}
+
+.timer-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.timer-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.timer-btn-pause {
+  background: rgba(255, 152, 0, 0.2);
+  color: white;
+}
+
+.timer-btn-pause:hover {
+  background: rgba(255, 152, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.timer-btn-resume {
+  background: rgba(76, 175, 80, 0.2);
+  color: white;
+}
+
+.timer-btn-resume:hover {
+  background: rgba(76, 175, 80, 0.3);
+  transform: translateY(-2px);
+}
+
+.timer-btn-complete {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.timer-btn-complete:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.timer-btn:active {
+  transform: translateY(0);
+}
+
+.timer-metrics {
+  display: flex;
+  gap: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.timer-metric {
+  flex: 1;
+  text-align: center;
+}
+
+.timer-metric-label {
+  display: block;
+  font-size: 11px;
+  opacity: 0.8;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.timer-metric-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+/* ============================================
+   NO PROCESS STATE
+   ============================================ */
+
+.timer-no-process {
+  padding: 40px 20px;
+  text-align: center;
+  color: #999;
+}
+
+.timer-empty-icon {
+  font-size: 64px;
+  margin-bottom: 15px;
+  opacity: 0.5;
+}
+
+.timer-no-process h3 {
+  margin: 0 0 10px 0;
+  color: #666;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.timer-no-process p {
+  margin: 0;
+  font-size: 14px;
+  color: #999;
+}
+
+/* ============================================
+   PERSONAL SEQUENCE
+   ============================================ */
+
+.timer-sequence-section {
+  margin: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.timer-sequence-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+.timer-sequence-count {
+  background: #667eea;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.timer-sequence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.timer-sequence-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.timer-sequence-item:hover {
+  border-color: #667eea;
+  background: #f0f3ff;
+  transform: translateX(5px);
+}
+
+.timer-sequence-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #667eea;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.timer-sequence-name {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+}
+
+.timer-sequence-empty {
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  padding: 20px;
+  margin: 0;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 400px) {
+  .timer-display {
+    font-size: 36px;
+  }
+
+  .timer-active-card {
+    margin: 15px;
+    padding: 15px;
+  }
+
+  .timer-actions {
+    flex-direction: column;
+  }
+
+  .timer-btn {
+    width: 100%;
+  }
+}
