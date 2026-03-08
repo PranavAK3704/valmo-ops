@@ -724,37 +724,7 @@ class CaptainMetricsDashboard {
 // Global instance
 window.captainMetricsDashboard = new CaptainMetricsDashboard();
 
-// Auto-initialize for Captains on Log10
-if (window.location.hostname.includes('console.valmo.in')) {
-  // Wait for sidebar and timer system
-  const waitForSidebarAndInit = () => {
-    const checkInterval = setInterval(() => {
-      const nav = document.querySelector('.valmo-nav');
-      const content = document.querySelector('.valmo-content');
-      
-      if (nav && content && window.captainTimerSystem?.initialized) {
-        clearInterval(checkInterval);
-        const userEmail = window.captainTimerSystem.userEmail;
-        if (userEmail) {
-          console.log('[Metrics Dashboard] Sidebar ready, initializing...');
-          window.captainMetricsDashboard.init(userEmail);
-        }
-      }
-    }, 100);
-    
-    // Timeout after 10 seconds
-    setTimeout(() => {
-      clearInterval(checkInterval);
-      console.warn('[Metrics Dashboard] Timeout waiting for sidebar');
-    }, 10000);
-  };
-  
-  // Start waiting after DOM loads
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', waitForSidebarAndInit);
-  } else {
-    waitForSidebarAndInit();
-  }
-}
+// Auto-initialize is handled by content.js
+// This file just provides the CaptainMetricsDashboard class
 
 console.log('[Metrics Dashboard] Script loaded');

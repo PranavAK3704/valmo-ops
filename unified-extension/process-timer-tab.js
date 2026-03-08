@@ -480,34 +480,7 @@ class ProcessTimerTab {
 // Global instance
 window.processTimerTab = new ProcessTimerTab();
 
-// Auto-initialize for Captains on Log10
-if (window.location.hostname.includes('console.valmo.in')) {
-  // Wait for sidebar to actually exist
-  const waitForSidebarAndInit = () => {
-    const checkInterval = setInterval(() => {
-      const nav = document.querySelector('.valmo-nav');
-      const content = document.querySelector('.valmo-content');
-      
-      if (nav && content && window.captainTimerSystem?.initialized) {
-        clearInterval(checkInterval);
-        console.log('[Timer Tab] Sidebar ready, initializing...');
-        window.processTimerTab.init();
-      }
-    }, 100);
-    
-    // Timeout after 10 seconds
-    setTimeout(() => {
-      clearInterval(checkInterval);
-      console.warn('[Timer Tab] Timeout waiting for sidebar');
-    }, 10000);
-  };
-  
-  // Start waiting after DOM loads
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', waitForSidebarAndInit);
-  } else {
-    waitForSidebarAndInit();
-  }
-}
+// Auto-initialize is handled by content.js
+// This file just provides the ProcessTimerTab class
 
 console.log('[Timer Tab] Script loaded');

@@ -128,6 +128,19 @@ async function init() {
       try {
         await window.captainTimerSystem.init(currentUser.email);
         console.log('[Captain Timer] ✅ System initialized');
+        
+        // Initialize Timer Tab UI
+        if (window.processTimerTab) {
+          await window.processTimerTab.init();
+          console.log('[Timer Tab] ✅ UI initialized');
+        }
+        
+        // Initialize Metrics Dashboard
+        if (window.captainMetricsDashboard) {
+          await window.captainMetricsDashboard.init(currentUser.email);
+          console.log('[Metrics Dashboard] ✅ Dashboard initialized');
+        }
+        
       } catch (error) {
         console.error('[Captain Timer] Init error:', error);
       }
