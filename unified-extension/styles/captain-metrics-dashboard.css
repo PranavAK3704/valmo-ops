@@ -1,0 +1,264 @@
+/**
+ * captain-metrics-dashboard.css - Metrics Dashboard Styling
+ */
+
+/* ============================================
+   DASHBOARD CONTAINER
+   ============================================ */
+
+.metrics-dashboard {
+  padding: 20px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.metrics-header {
+  margin-bottom: 25px;
+}
+
+.metrics-header h2 {
+  margin: 0 0 5px 0;
+  color: #333;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.metrics-subtitle {
+  margin: 0;
+  color: #666;
+  font-size: 13px;
+}
+
+/* ============================================
+   METRICS CARDS GRID
+   ============================================ */
+
+.metrics-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.metrics-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 15px;
+  transition: all 0.3s;
+}
+
+.metrics-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+  transform: translateY(-2px);
+}
+
+.metrics-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.metrics-card-icon {
+  font-size: 20px;
+}
+
+.metrics-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metrics-card-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metrics-card-label {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.metrics-card-detail {
+  font-size: 12px;
+  color: #999;
+}
+
+.metrics-card-detail.positive {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+.metrics-card-detail.negative {
+  color: #ff5722;
+  font-weight: 600;
+}
+
+/* ============================================
+   MINI CHARTS
+   ============================================ */
+
+.metrics-mini-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 40px;
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.metrics-chart-bar {
+  flex: 1;
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  border-radius: 2px;
+  min-height: 2px;
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+.metrics-chart-bar:hover {
+  opacity: 1;
+}
+
+/* ============================================
+   CORRELATION SIGNAL
+   ============================================ */
+
+.metrics-correlation {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+}
+
+.metrics-correlation h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.metrics-correlation-note {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* ============================================
+   PROCESS BREAKDOWN TABLE
+   ============================================ */
+
+.metrics-breakdown {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.metrics-breakdown h3 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.metrics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.metrics-table thead {
+  background: #f8f9fa;
+}
+
+.metrics-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 600;
+  color: #666;
+  border-bottom: 2px solid #e0e0e0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metrics-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+
+.metrics-table tr:hover {
+  background: #f8f9fa;
+}
+
+.metrics-table-process {
+  font-weight: 600;
+  color: #667eea;
+}
+
+/* ============================================
+   EMPTY STATE
+   ============================================ */
+
+.metrics-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: #999;
+}
+
+.metrics-empty-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.metrics-empty h3 {
+  margin: 0 0 10px 0;
+  color: #666;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.metrics-empty p {
+  margin: 0;
+  font-size: 14px;
+  color: #999;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 600px) {
+  .metrics-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-card-value {
+    font-size: 28px;
+  }
+
+  .metrics-table {
+    font-size: 11px;
+  }
+
+  .metrics-table th,
+  .metrics-table td {
+    padding: 8px 6px;
+  }
+}
