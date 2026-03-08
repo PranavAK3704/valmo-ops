@@ -307,19 +307,32 @@ class ProcessTimerTab {
    * Handle pause button
    */
   async handlePause() {
-    // Show pause reason modal
-    const reason = prompt('Why are you pausing?\n(This helps track knowledge gaps)');
+    // Pause the timer
+    const pause = await window.captainTimerSystem.pauseProcess('Paused to resolve issue');
 
-    if (!reason) return;
+    if (!pause) {
+      alert('Failed to pause process');
+      return;
+    }
 
-    await window.captainTimerSystem.pauseProcess(reason);
+    // Show pause modal
+    if (window.captainPauseModal) {
+      window.captainPauseModal.show(pause);
+    } else {
+      console.error('[Timer Tab] Pause modal not loaded');
+      
+      // Fallback: show simple prompt
+      const reason = prompt('Why are you pausing?\n(This helps track knowledge gaps)');
+      if (reason) {
+        // Update pause reason
+        pause.reason = reason;
+      }
+    }
 
     // Update UI
     this.updateUI();
 
-    console.log('[Timer Tab] Paused:', reason);
-
-    // TODO: Show pause modal with Jarvis/Video options (Phase 3)
+    console.log('[Timer Tab] Paused');
   }
 
   /**
