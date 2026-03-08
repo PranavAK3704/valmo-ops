@@ -1,5 +1,5 @@
 /* Storage helper - uses localStorage */
-const storage = {
+const metricsStorage = {
   async get(keys) {
     const result = {};
     keys.forEach(key => {
