@@ -141,13 +141,22 @@ async function init() {
       (document.head || document.documentElement).appendChild(script);
     });
     
-    // Wait for scripts to load and initialize
-    setTimeout(() => {
-      window.postMessage({
-        type: 'INIT_CAPTAIN_TIMER',
-        email: currentUser.email
-      }, '*');
-      console.log('[Captain Timer] ✅ Init message sent');
+    // Wait for scripts to load, then fetch processes and send init message
+    setTimeout(async () => {
+      // Fetch processes from background
+      chrome.runtime.sendMessage({ type: 'GET_ALL_PROCESSES' }, (response) => {
+        const processes = response?.processes || [];
+        console.log(`[Captain Timer] Fetched ${processes.length} processes from background`);
+        
+        // Send init message with processes
+        window.postMessage({
+          type: 'INIT_CAPTAIN_TIMER',
+          email: currentUser.email,
+          processes: processes
+        }, '*');
+        
+        console.log('[Captain Timer] ✅ Init message sent with processes');
+      });
     }, 1000);
   }
 }

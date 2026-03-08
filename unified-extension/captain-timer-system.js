@@ -20,13 +20,18 @@ class CaptainTimerSystem {
   /**
    * Initialize timer system for captain
    */
-  async init(userEmail) {
+  async init(userEmail, processes = []) {
     this.userEmail = userEmail;
     
     console.log('[Captain Timer] Initializing for:', userEmail);
 
-    // Load all available processes
-    await this.loadAllProcesses();
+    // Use provided processes (from content script) or load them
+    if (processes && processes.length > 0) {
+      this.allProcesses = processes;
+      console.log('[Captain Timer] Loaded', this.allProcesses.length, 'processes (from content script)');
+    } else {
+      await this.loadAllProcesses();
+    }
 
     // Load captain's personal sequence
     await this.loadPersonalSequence();
@@ -631,7 +636,8 @@ window.addEventListener('message', async (event) => {
   if (event.data.type === 'INIT_CAPTAIN_TIMER') {
     console.log('[Captain Timer] Received init message');
     try {
-      await window.captainTimerSystem.init(event.data.email);
+      // Init with email and processes from content script
+      await window.captainTimerSystem.init(event.data.email, event.data.processes || []);
       
       // Initialize UI components
       if (window.processTimerTab) {
