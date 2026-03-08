@@ -482,16 +482,32 @@ window.processTimerTab = new ProcessTimerTab();
 
 // Auto-initialize for Captains on Log10
 if (window.location.hostname.includes('console.valmo.in')) {
-  document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(async () => {
-      // Check if captain timer system is loaded
-      if (window.captainTimerSystem && window.captainTimerSystem.initialized) {
-        await window.processTimerTab.init();
-      } else {
-        console.warn('[Timer Tab] captainTimerSystem not ready yet');
+  // Wait for sidebar to actually exist
+  const waitForSidebarAndInit = () => {
+    const checkInterval = setInterval(() => {
+      const nav = document.querySelector('.valmo-nav');
+      const content = document.querySelector('.valmo-content');
+      
+      if (nav && content && window.captainTimerSystem?.initialized) {
+        clearInterval(checkInterval);
+        console.log('[Timer Tab] Sidebar ready, initializing...');
+        window.processTimerTab.init();
       }
-    }, 1500); // Wait for sidebar to be injected
-  });
+    }, 100);
+    
+    // Timeout after 10 seconds
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      console.warn('[Timer Tab] Timeout waiting for sidebar');
+    }, 10000);
+  };
+  
+  // Start waiting after DOM loads
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', waitForSidebarAndInit);
+  } else {
+    waitForSidebarAndInit();
+  }
 }
 
 console.log('[Timer Tab] Script loaded');
