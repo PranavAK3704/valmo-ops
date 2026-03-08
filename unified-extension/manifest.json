@@ -59,10 +59,6 @@
         "gamification/my-stats-tab.js",
         "gamification/snooze-feature.js",      
         "gamification/metrics-dashboard.js",
-        "captain-timer-system.js",
-        "captain-pause-modal.js",
-        "process-timer-tab.js",
-        "captain-metrics-dashboard.js",
         "captain-process-overlay.js",
         "tat-system/tat-tracker-background.js",
         "tat-system/tat-analytics.js",
@@ -99,7 +95,11 @@
         "data/log10_processes.json",
         "data/sop_database.json",
         "data/template_database.json",
-        "data/*.mp4"
+        "data/*.mp4",
+        "captain-timer-system.js",
+        "captain-pause-modal.js",
+        "process-timer-tab.js",
+        "captain-metrics-dashboard.js"
       ],
       "matches": [
         "https://console.valmo.in/*",

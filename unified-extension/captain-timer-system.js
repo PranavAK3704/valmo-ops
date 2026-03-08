@@ -626,4 +626,30 @@ class CaptainTimerSystem {
 // Global instance
 window.captainTimerSystem = new CaptainTimerSystem();
 
+// Listen for init message from content script
+window.addEventListener('message', async (event) => {
+  if (event.data.type === 'INIT_CAPTAIN_TIMER') {
+    console.log('[Captain Timer] Received init message');
+    try {
+      await window.captainTimerSystem.init(event.data.email);
+      
+      // Initialize UI components
+      if (window.processTimerTab) {
+        await window.processTimerTab.init();
+      }
+      
+      if (window.captainMetricsDashboard) {
+        await window.captainMetricsDashboard.init(event.data.email);
+      }
+      
+      // Mark as ready
+      document.body.setAttribute('data-timer-ready', 'true');
+      
+      console.log('[Captain Timer] ✅ All systems initialized');
+    } catch (error) {
+      console.error('[Captain Timer] Init error:', error);
+    }
+  }
+});
+
 console.log('[Captain Timer] System loaded');

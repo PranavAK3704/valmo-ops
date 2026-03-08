@@ -123,30 +123,32 @@ async function init() {
       console.warn('[Gamification] metricsDashboard not loaded');
     }
 
-    // Initialize Captain Timer System
-    if (window.captainTimerSystem) {
-      try {
-        await window.captainTimerSystem.init(currentUser.email);
-        console.log('[Captain Timer] ✅ System initialized');
-        
-        // Initialize Timer Tab UI
-        if (window.processTimerTab) {
-          await window.processTimerTab.init();
-          console.log('[Timer Tab] ✅ UI initialized');
-        }
-        
-        // Initialize Metrics Dashboard
-        if (window.captainMetricsDashboard) {
-          await window.captainMetricsDashboard.init(currentUser.email);
-          console.log('[Metrics Dashboard] ✅ Dashboard initialized');
-        }
-        
-      } catch (error) {
-        console.error('[Captain Timer] Init error:', error);
-      }
-    } else {
-      console.warn('[Captain Timer] captainTimerSystem not loaded');
-    }
+    // Initialize Captain Timer System by injecting into page context
+    console.log('[Captain Timer] Injecting scripts into page context...');
+    
+    // Inject timer scripts into page
+    const scriptsToInject = [
+      'captain-timer-system.js',
+      'captain-pause-modal.js',
+      'process-timer-tab.js',
+      'captain-metrics-dashboard.js'
+    ];
+    
+    scriptsToInject.forEach(scriptName => {
+      const script = document.createElement('script');
+      script.src = chrome.runtime.getURL(scriptName);
+      script.onload = () => console.log(`[Captain Timer] ✅ Injected ${scriptName}`);
+      (document.head || document.documentElement).appendChild(script);
+    });
+    
+    // Wait for scripts to load and initialize
+    setTimeout(() => {
+      window.postMessage({
+        type: 'INIT_CAPTAIN_TIMER',
+        email: currentUser.email
+      }, '*');
+      console.log('[Captain Timer] ✅ Init message sent');
+    }, 1000);
   }
 }
 
