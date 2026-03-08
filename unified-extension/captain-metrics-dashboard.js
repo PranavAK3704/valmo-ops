@@ -1,3 +1,18 @@
+/* Storage helper - uses localStorage */
+const storage = {
+  async get(keys) {
+    const result = {};
+    keys.forEach(key => {
+      const value = localStorage.getItem(key);
+      if (value) try { result[key] = JSON.parse(value); } catch { result[key] = value; }
+    });
+    return result;
+  },
+  async set(items) {
+    Object.keys(items).forEach(key => localStorage.setItem(key, JSON.stringify(items[key])));
+  }
+};
+
 /**
  * captain-metrics-dashboard.js - Pranav Akella Metrics Dashboard
  * 
@@ -43,7 +58,7 @@ class CaptainMetricsDashboard {
    */
   async loadSessionHistory() {
     const historyKey = `captain_session_history_${this.userEmail}`;
-    const result = await chrome.storage.local.get([historyKey]);
+    const result = await storage.get([historyKey]);
     this.sessionHistory = result[historyKey] || [];
     console.log('[Metrics Dashboard] Loaded', this.sessionHistory.length, 'sessions');
   }
