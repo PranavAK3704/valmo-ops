@@ -12,7 +12,7 @@
  * Storage helper - uses localStorage instead of chrome.storage
  * (because this script runs in page context)
  */
-const storage = {
+const timerStorage = {
   async get(keys) {
     const result = {};
     keys.forEach(key => {
@@ -96,7 +96,7 @@ class CaptainTimerSystem {
    */
   async loadPersonalSequence() {
     const key = `captain_sequence_${this.userEmail}`;
-    const result = await storage.get([key]);
+    const result = await timerStorage.get([key]);
     
     if (result[key]) {
       this.processSequence = result[key];
@@ -112,7 +112,7 @@ class CaptainTimerSystem {
    */
   async savePersonalSequence() {
     const key = `captain_sequence_${this.userEmail}`;
-    await storage.set({
+    await timerStorage.set({
       [key]: this.processSequence
     });
   }
@@ -121,7 +121,7 @@ class CaptainTimerSystem {
    * Restore active session if exists
    */
   async restoreActiveSession() {
-    const result = await storage.get(['captain_current_session']);
+    const result = await timerStorage.get(['captain_current_session']);
     
     if (result.captain_current_session && result.captain_current_session.captain_email === this.userEmail) {
       this.currentSession = result.captain_current_session;
@@ -184,7 +184,7 @@ class CaptainTimerSystem {
    */
   getLastCompletedProcess() {
     const historyKey = `captain_session_history_${this.userEmail}`;
-    const result = storage.get([historyKey]);
+    const result = timerStorage.get([historyKey]);
     
     if (result[historyKey] && result[historyKey].length > 0) {
       return result[historyKey][0].process_name;
@@ -428,7 +428,7 @@ class CaptainTimerSystem {
     this.currentSession = null;
 
     // Clear storage
-    await storage.remove(['captain_current_session']);
+    await timerStorage.remove(['captain_current_session']);
 
     // Show next process notification
     this.showNextProcessNotification();
@@ -535,7 +535,7 @@ class CaptainTimerSystem {
 
     // Get existing history
     const historyKey = `captain_session_history_${this.userEmail}`;
-    const result = await storage.get([historyKey]);
+    const result = await timerStorage.get([historyKey]);
     const history = result[historyKey] || [];
 
     // Add new entry
@@ -547,7 +547,7 @@ class CaptainTimerSystem {
     }
 
     // Save back
-    await storage.set({
+    await timerStorage.set({
       [historyKey]: history
     });
 
@@ -614,7 +614,7 @@ class CaptainTimerSystem {
   async saveCurrentSession() {
     if (!this.currentSession) return;
 
-    await storage.set({
+    await timerStorage.set({
       captain_current_session: this.currentSession
     });
   }
@@ -635,7 +635,7 @@ class CaptainTimerSystem {
    */
   async getHistory(limit = 30) {
     const historyKey = `captain_session_history_${this.userEmail}`;
-    const result = await storage.get([historyKey]);
+    const result = await timerStorage.get([historyKey]);
     const history = result[historyKey] || [];
     return history.slice(0, limit);
   }

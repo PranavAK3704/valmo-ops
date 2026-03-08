@@ -58,7 +58,7 @@ class CaptainMetricsDashboard {
    */
   async loadSessionHistory() {
     const historyKey = `captain_session_history_${this.userEmail}`;
-    const result = await storage.get([historyKey]);
+    const result = await metricsStorage.get([historyKey]);
     this.sessionHistory = result[historyKey] || [];
     console.log('[Metrics Dashboard] Loaded', this.sessionHistory.length, 'sessions');
   }
