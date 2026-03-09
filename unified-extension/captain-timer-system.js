@@ -32,6 +32,12 @@ const timerStorage = {
     Object.keys(items).forEach(key => {
       localStorage.setItem(key, JSON.stringify(items[key]));
     });
+  },
+
+  async remove(keys) {
+    keys.forEach(key => {
+      localStorage.removeItem(key);
+    });
   }
 };
 
@@ -122,13 +128,26 @@ class CaptainTimerSystem {
    */
   async restoreActiveSession() {
     const result = await timerStorage.get(['captain_current_session']);
-    
+
     if (result.captain_current_session && result.captain_current_session.captain_email === this.userEmail) {
-      this.currentSession = result.captain_current_session;
-      console.log('[Captain Timer] Restored active session:', this.currentSession.process_name);
-      
-      // Resume timer
-      this.startTimer();
+      const session = result.captain_current_session;
+      const ageMs = Date.now() - session.start_time;
+      const eightHours = 8 * 60 * 60 * 1000;
+
+      if (ageMs > eightHours) {
+        // Stale session from a previous day/shift — discard it
+        console.log('[Captain Timer] Discarding stale session:', session.process_name);
+        await timerStorage.remove(['captain_current_session']);
+        return;
+      }
+
+      this.currentSession = session;
+      console.log('[Captain Timer] Restored active session:', this.currentSession.process_name, '| running:', session.timer_running);
+
+      // Only restart timer if it was actually running (not paused) before
+      if (session.timer_running) {
+        this.startTimer();
+      }
     }
   }
 
@@ -586,12 +605,7 @@ class CaptainTimerSystem {
    */
   getElapsedTime() {
     if (!this.currentSession) return 0;
-    
-    if (this.currentSession.timer_running) {
-      return Math.floor((Date.now() - this.currentSession.start_time) / 1000);
-    } else {
-      return this.currentSession.elapsed_time;
-    }
+    return this.currentSession.elapsed_time;
   }
 
   /**

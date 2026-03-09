@@ -499,6 +499,9 @@ class CaptainPauseModal {
     // Hide modal
     this.hide();
 
+    // Refresh timer tab UI so status/buttons reflect running state
+    window.processTimerTab?.updateUI();
+
     // Notify user
     if (successful) {
       this.showSuccessToast('Process resumed successfully!');
