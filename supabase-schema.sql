@@ -222,6 +222,49 @@ CREATE TRIGGER trg_apply_xp
   EXECUTE FUNCTION fn_apply_xp();
 
 -- ================================================================
+-- ASSESSMENTS
+-- Trainers create MCQ assessments linked to processes/sims
+-- ================================================================
+
+CREATE TABLE IF NOT EXISTS assessments (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title         TEXT NOT NULL,
+  process_name  TEXT,
+  sim_id        TEXT REFERENCES simulations(id) ON DELETE SET NULL,
+  passing_score INTEGER DEFAULT 70,
+  created_by    TEXT,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE assessments DISABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS assessment_questions (
+  id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  assessment_id  UUID NOT NULL REFERENCES assessments(id) ON DELETE CASCADE,
+  question       TEXT NOT NULL,
+  options        JSONB NOT NULL,  -- [{"key":"A","text":"..."},...]
+  correct_key    TEXT NOT NULL,   -- "A" | "B" | "C" | "D"
+  explanation    TEXT,
+  order_index    INTEGER DEFAULT 0
+);
+ALTER TABLE assessment_questions DISABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_aq_assessment ON assessment_questions(assessment_id);
+
+CREATE TABLE IF NOT EXISTS assessment_results (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email         TEXT NOT NULL,
+  assessment_id UUID NOT NULL REFERENCES assessments(id),
+  score         INTEGER NOT NULL,  -- 0-100
+  passed        BOOLEAN NOT NULL,
+  answers       JSONB,             -- {"<question_id>": "A", ...}
+  attempt_count INTEGER DEFAULT 1,
+  completed_at  TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE assessment_results DISABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_ar_email      ON assessment_results(email);
+CREATE INDEX IF NOT EXISTS idx_ar_assessment ON assessment_results(assessment_id);
+
+-- ================================================================
 -- SIM ASSIGNMENTS
 -- Admin assigns specific sims to specific hubs or individual captains
 -- ================================================================

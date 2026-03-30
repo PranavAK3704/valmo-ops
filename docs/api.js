@@ -212,6 +212,74 @@ const API = {
   },
 
   /**
+   * Get the assessment (+ questions) for a given process name.
+   * Returns null if no assessment exists.
+   */
+  async getAssessmentForProcess(processName) {
+    if (!processName) return null;
+    try {
+      const rows = await sb(
+        'assessments',
+        `?process_name=eq.${encodeURIComponent(processName)}&select=*&limit=1`
+      );
+      if (!rows.length) return null;
+      const assessment = rows[0];
+      const questions = await sb(
+        'assessment_questions',
+        `?assessment_id=eq.${assessment.id}&order=order_index.asc`
+      );
+      return { ...assessment, questions };
+    } catch (e) {
+      console.error('[API] getAssessmentForProcess failed:', e);
+      return null;
+    }
+  },
+
+  /**
+   * Get best previous result for this captain + assessment.
+   */
+  async getAssessmentResult(email, assessmentId) {
+    if (!email || !assessmentId) return null;
+    try {
+      const rows = await sb(
+        'assessment_results',
+        `?email=eq.${encodeURIComponent(email)}&assessment_id=eq.${assessmentId}&order=score.desc&limit=1`
+      );
+      return rows[0] || null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  /**
+   * Save assessment result + award XP if passed.
+   */
+  async submitAssessmentResult(email, assessmentId, score, passed, answers, attemptCount) {
+    try {
+      await sbInsert('assessment_results', {
+        email,
+        assessment_id: assessmentId,
+        score,
+        passed,
+        answers,
+        attempt_count: attemptCount,
+        completed_at: new Date().toISOString()
+      });
+      if (passed) {
+        await sbInsert('gamification_events', {
+          email,
+          event_type:   'xp_earned',
+          xp_amount:    75,
+          reason:       'Assessment passed',
+          created_at:   new Date().toISOString()
+        });
+      }
+    } catch (e) {
+      console.error('[API] submitAssessmentResult failed:', e);
+    }
+  },
+
+  /**
    * Get sims assigned to this captain (direct or via hub).
    * Queries the captain_pending_sims view which already expands hub assignments.
    */

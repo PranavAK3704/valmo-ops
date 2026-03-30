@@ -607,11 +607,7 @@ function watchVideo(processName, videoLink) {
 }
 
 function takeAssessment(processName) {
-  console.log('[Dashboard] Taking assessment:', processName);
-  
-  // This will be handled by assessment.js
-  // For now, just log
-  alert(`Assessment for "${processName}" will open here.\n\nThis will be implemented in assessment.js with:\n- Questions from Google Sheets\n- AI grading with Groq\n- XP rewards`);
+  AssessmentSystem.open(processName);
 }
 
 function openJarvis() {
