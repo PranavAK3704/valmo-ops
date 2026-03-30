@@ -23,17 +23,48 @@ const SHEETS_CONFIG = {
   refresh_interval: 300000
 };
 
-// Groq API settings for smart chatbot
+// ─────────────────────────────────────────────────────────────────
+// JARVIS CONFIG  ← Plug your AI in here
+// ─────────────────────────────────────────────────────────────────
+// Jarvis is tried FIRST. If it fails or is disabled, Groq is used.
+// Jarvis must expose an OpenAI-compatible endpoint:
+//   POST <endpoint>/v1/chat/completions
+//   Body: { model, messages, max_tokens, temperature }
+//   Response: { choices: [{ message: { content } }] }
+//
+// If Jarvis uses a completely different format, set request_format to
+// 'custom' and Claude Code will write a custom adapter for you.
+// ─────────────────────────────────────────────────────────────────
+const JARVIS_CONFIG = {
+  enabled: false,                        // ← flip to true when ready
+
+  // Base URL for Jarvis (without /v1/chat/completions)
+  endpoint: 'YOUR_JARVIS_BASE_URL_HERE', // e.g. 'https://jarvis.yourcompany.com'
+
+  api_key: 'YOUR_JARVIS_API_KEY_HERE',   // Bearer token / API key
+
+  model: 'jarvis',                       // Model name Jarvis expects
+
+  // 'openai'  → standard OpenAI-compatible format (most AIs)
+  // 'custom'  → tell Claude Code the format and it'll write the adapter
+  request_format: 'openai'
+};
+
+// ─────────────────────────────────────────────────────────────────
+// SUPABASE CONFIG  ← LMS backend (admin portal + cross-agent data)
+// ─────────────────────────────────────────────────────────────────
+const SUPABASE_CONFIG = {
+  url:      'https://wfnmltorfvaokqbzggkn.supabase.co',
+  anon_key: 'sb_publishable_kVRokdcfNT-egywk-KbQ3g_mEs5QVGW'
+};
+
+// Groq API — fallback when Jarvis is disabled or unavailable
 const CHATBOT_CONFIG = {
-  // Set to true to use Groq API (smart chatbot)
-  // Set to false to use keyword search (simple chatbot)
   use_claude_api: true,
-  
+
   // ⭐ PASTE YOUR GROQ API KEY HERE ⭐
-  // Get it from: https://console.groq.com/keys
-  api_key: '',
-  
-  // System prompt for Groq
+  api_key: '',  // set your Groq key here locally — never commit
+
   system_prompt: `You are a helpful L1 support agent assistant for Valmo logistics operations.
 Your job is to help L1 agents answer support tickets by searching through SOPs and providing clear guidance.
 

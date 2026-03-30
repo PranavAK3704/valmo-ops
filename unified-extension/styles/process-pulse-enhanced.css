@@ -9,7 +9,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .valmo-progress-stats {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #F43397 0%, #9747FF 100%);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 20px;
@@ -244,7 +244,7 @@
 .valmo-video-btn {
   flex: 1;
   padding: 10px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #F43397 0%, #9747FF 100%);
   color: white;
   border: none;
   border-radius: 6px;
@@ -258,6 +258,24 @@
   transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
+
+.valmo-complete-btn {
+  padding: 8px 12px;
+  background: #f0f9ff;
+  color: #0ea5e9;
+  border: 1.5px solid #0ea5e9;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.valmo-complete-btn:hover:not(:disabled) { background: #0ea5e9; color: #fff; }
+.valmo-complete-btn.done, .valmo-complete-btn:disabled {
+  background: #f0fdf4; color: #22c55e; border-color: #22c55e; cursor: default;
+}
+.valmo-card-done { border-left: 3px solid #22c55e; opacity: 0.85; }
 
 .valmo-mark-complete-btn {
   padding: 10px 16px;
@@ -342,7 +360,7 @@
 .valmo-video-btn-small {
   width: 32px;
   height: 32px;
-  background: #667eea;
+  background: #F43397;
   color: white;
   border: none;
   border-radius: 6px;
@@ -356,7 +374,7 @@
 }
 
 .valmo-video-btn-small:hover {
-  background: #764ba2;
+  background: #9747FF;
   transform: scale(1.1);
 }
 
@@ -367,7 +385,7 @@
 .valmo-view-all-btn {
   margin-top: 16px;
   padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #F43397 0%, #9747FF 100%);
   color: white;
   border: none;
   border-radius: 8px;

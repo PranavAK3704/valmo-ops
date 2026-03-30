@@ -334,21 +334,18 @@ class ProcessOverlay {
 // Global instance
 const processOverlay = new ProcessOverlay();
 
-// Auto-initialize when on Log10
+// Auto-initialize when on Log10 — read actual user email from extension storage
 if (window.location.hostname.includes('console.valmo.in')) {
-  // Wait for DOM and process-progress to be ready
+  const initOverlay = async () => {
+    const result = await chrome.storage.local.get(['userEmail', 'userRole']);
+    if (result.userEmail && result.userRole === 'Captain') {
+      processOverlay.init(result.userEmail);
+    }
+  };
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => {
-        // TODO: Get user email from page/API
-        const userEmail = 'captain@valmo.com'; // Replace with actual user detection
-        processOverlay.init(userEmail);
-      }, 1000);
-    });
+    document.addEventListener('DOMContentLoaded', () => setTimeout(initOverlay, 500));
   } else {
-    setTimeout(() => {
-      const userEmail = 'captain@valmo.com'; // Replace with actual user detection
-      processOverlay.init(userEmail);
-    }, 1000);
+    setTimeout(initOverlay, 500);
   }
 }

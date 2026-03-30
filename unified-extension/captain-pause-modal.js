@@ -34,6 +34,14 @@ class CaptainPauseModal {
     // Show issue description
     this.showIssueStep(pauseData.reason);
 
+    // Show pause timestamp in header
+    const ts = new Date().toLocaleString('en-IN', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    const tsEl = document.getElementById('pause-modal-timestamp');
+    if (tsEl) tsEl.textContent = `Paused at: ${ts}`;
+
     // Display modal
     this.modalElement.classList.add('visible');
     document.body.style.overflow = 'hidden'; // Prevent background scroll
@@ -53,7 +61,10 @@ class CaptainPauseModal {
         <!-- Header -->
         <div class="captain-pause-header">
           <div class="captain-pause-icon">⏸️</div>
-          <h2 class="captain-pause-title">Process Paused</h2>
+          <div>
+            <h2 class="captain-pause-title">Process Paused</h2>
+            <div class="captain-pause-timestamp" id="pause-modal-timestamp"></div>
+          </div>
           <button class="captain-pause-close" id="pause-modal-close">✕</button>
         </div>
 
@@ -372,8 +383,9 @@ class CaptainPauseModal {
     // Add assistant response
     this.addChatMessage('assistant', response);
 
-    // Save to history
+    // Save to modal history AND register with timer system so query count increments
     this.chatHistory.push({ query, response, satisfied: null });
+    window.captainTimerSystem?.addQuery(query, response, null);
   }
 
   /**
@@ -399,8 +411,9 @@ class CaptainPauseModal {
     // Add assistant response
     this.addChatMessage('assistant', response);
 
-    // Save to history
+    // Save to modal history AND register with timer system so query count increments
     this.chatHistory.push({ query: message, response, satisfied: null });
+    window.captainTimerSystem?.addQuery(message, response, null);
   }
 
   /**
@@ -425,19 +438,51 @@ class CaptainPauseModal {
   }
 
   /**
-   * Call Jarvis API (placeholder - integrate with your actual implementation)
+   * Call Groq API (real AI response for pause-modal chat)
    */
   async callJarvis(query, processContext) {
-    // TODO: Replace with actual Jarvis API call
-    // For now, return a mock response
+    const apiKey = window.captainGroqApiKey;
+    if (!apiKey) {
+      return 'AI assistant is not configured. Please ask your admin to set the Groq API key.';
+    }
 
-    console.log('[Pause Modal] Jarvis Query:', query, 'Context:', processContext);
+    const systemPrompt = (window.captainSystemPrompt || '') +
+      `\n\nYou are helping a Valmo captain who is blocked during the "${processContext}" process. Be concise and actionable.`;
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Build conversation history for context
+    const messages = [{ role: 'system', content: systemPrompt }];
+    this.chatHistory.forEach(h => {
+      messages.push({ role: 'user', content: h.query });
+      messages.push({ role: 'assistant', content: h.response });
+    });
+    messages.push({ role: 'user', content: query });
 
-    // Mock response
-    return `I understand you need help with "${query}" for the ${processContext} process. Here's what you should do:\n\n1. Check the process guidelines\n2. Verify all inputs are correct\n3. If the issue persists, escalate to supervisor\n\nDoes this help?`;
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages,
+          max_tokens: 500,
+          temperature: 0.3
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(`Groq ${response.status}: ${err.error?.message || 'error'}`);
+      }
+
+      const data = await response.json();
+      return data.choices[0].message.content;
+    } catch (error) {
+      console.error('[Pause Modal] Groq error:', error.message);
+      return `Sorry, I couldn't connect to the AI right now. (${error.message})\n\nPlease check the process guidelines or escalate to your supervisor.`;
+    }
   }
 
   /**

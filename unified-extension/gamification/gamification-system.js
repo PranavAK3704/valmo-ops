@@ -127,6 +127,22 @@ class GamificationSystem {
     console.log(`[Gamification] +${amount} XP for: ${reason}`);
     console.log(`[Gamification] Total XP: ${oldXP} → ${this.userData.totalXP}`);
 
+    // Sync to Supabase
+    if (typeof supabaseSync !== 'undefined') {
+      supabaseSync.syncXP(this.userEmail, amount, reason, null, leveledUp ? newLevel : null);
+      if (leveledUp) supabaseSync.syncLevelUp(this.userEmail, newLevel);
+      // Keep profile row current with latest XP + level
+      supabaseSync.upsert('agent_profiles', {
+        email:      this.userEmail,
+        level:      this.userData.level,
+        total_xp:   this.userData.totalXP,
+        streak_current: this.userData.streaks.current,
+        streak_longest: this.userData.streaks.longest,
+        last_active: new Date().toISOString(),
+        updated_at:  new Date().toISOString()
+      }, 'email');
+    }
+
     return {
       xpGained: amount,
       totalXP: this.userData.totalXP,
@@ -452,6 +468,11 @@ class GamificationSystem {
 
     // Award bonus XP
     await this.awardXP(achievement.xp, `🏅 Achievement: ${achievement.name}`);
+
+    // Sync to Supabase
+    if (typeof supabaseSync !== 'undefined') {
+      supabaseSync.syncAchievement(this.userEmail, achievementId, achievement.xp);
+    }
 
     console.log(`[Gamification] 🏅 Achievement unlocked: ${achievement.name}`);
   }

@@ -315,12 +315,23 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
         const version = markBtn.dataset.processVersion;
         const videoLink = markBtn.dataset.videoLink;
 
+        // Ensure userProgress is ready (initProgressTracking is async)
+        if (!this.userProgress) {
+          await processProgress.init(this.getCurrentUserEmail());
+          this.userProgress = processProgress;
+        }
+
+        // Immediate visual feedback
+        markBtn.textContent = '✅ Done';
+        markBtn.disabled = true;
+        markBtn.closest('.valmo-process-card')?.classList.add('valmo-card-done');
+
         await this.userProgress.markCompleted(processName, version, videoLink);
-        
+
         // Re-render to update UI
         this.renderProcesses(this.matches);
         this.renderProgressStats();
-        
+
         // Show success
         this.showSuccessToast(`✅ Marked "${processName}" as complete!`);
       }
@@ -333,7 +344,7 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
         const videoLink = watchBtn.dataset.videoLink;
 
         // Mark as viewed (not necessarily completed)
-        if (processName && version) {
+        if (processName && version && this.userProgress) {
           await this.userProgress.markViewed(processName, version, videoLink);
         }
       }
@@ -606,31 +617,33 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
       // ═══════════════════════════════════════════════════════════
       
       const completeBtn = e.target.closest('.valmo-complete-btn');
-      if (completeBtn) {
+      if (completeBtn && !completeBtn.disabled) {
         e.preventDefault();
         e.stopPropagation();
-        
-        const processName = completeBtn.dataset.processName || completeBtn.getAttribute('data-process-name');
-        const version = completeBtn.dataset.processVersion || completeBtn.getAttribute('data-process-version');
-        const videoLink = completeBtn.dataset.videoLink || completeBtn.getAttribute('data-video-link');
-        
+
+        // content.js uses data-process; enhanced cards use data-process-name
+        const processName = completeBtn.dataset.process || completeBtn.dataset.processName;
+        const version = completeBtn.dataset.processVersion || '1.0';
+        const videoLink = completeBtn.dataset.videoLink || '';
+
         console.log('[PATCH] Complete button clicked:', processName);
-        
-        // Mark as completed in process progress
-        if (window.processProgress) {
-          try {
-            await window.processProgress.markCompleted(processName, version, videoLink);
-            console.log('[PATCH] ✅ Marked as completed');
-            
-            // Refresh the UI
-            window.location.reload();
-          } catch (err) {
-            console.error('[PATCH] Error marking complete:', err);
-          }
-        } else {
-          console.warn('[PATCH] processProgress not available');
+
+        // Immediate UI feedback
+        completeBtn.textContent = '✅ Done';
+        completeBtn.disabled = true;
+        completeBtn.classList.add('done');
+        completeBtn.closest('.valmo-process-card')?.classList.add('valmo-card-done');
+
+        // Persist to chrome.storage via processProgress
+        if (window.processProgress && processName) {
+          window.processProgress.markCompleted(processName, version, videoLink)
+            .then(() => console.log('[PATCH] ✅ Saved:', processName))
+            .catch(err => console.error('[PATCH] Save error:', err));
         }
-        
+
+        // Also bridge to content.js for Supabase sync + XP
+        window.postMessage({ type: 'CAPTAIN_VIDEO_COMPLETE', email: window.__captainEmail, processName, xpAwarded: 30 }, '*');
+
         return;
       }
 

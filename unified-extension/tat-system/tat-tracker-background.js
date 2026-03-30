@@ -397,14 +397,197 @@ class TATTrackerBackground {
 
   /**
    * Update extension badge with overdue count
-   * Note: This runs in content script context, so we send message to background
    */
   updateBadge(overdueCount) {
-    // Send message to background to update badge
-    chrome.runtime.sendMessage({
-      type: 'UPDATE_BADGE',
-      count: overdueCount
+    chrome.runtime.sendMessage({ type: 'UPDATE_BADGE', count: overdueCount });
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // ART (Average Resolution Time) — completed ticket processing
+  // Runs every 30 min; much less aggressive than the pending poll.
+  // ════════════════════════════════════════════════════════════════
+
+  startARTTracking() {
+    // Clear cached ART data on start so bad numbers from previous builds don't persist
+    chrome.storage.local.remove(['artTickets', 'artSummary'], () => {
+      console.log('[ART] Cleared stale cache — will recalculate fresh');
     });
+
+    // Initial run after a short delay so pending-ticket fetch goes first
+    setTimeout(() => this.fetchAndProcessCompletedTickets(), 5000);
+
+    // Repeat every 30 minutes
+    setInterval(() => {
+      if (this.isTracking) this.fetchAndProcessCompletedTickets();
+    }, 30 * 60 * 1000);
+  }
+
+  async fetchAndProcessCompletedTickets() {
+    if (!chrome.runtime?.id) return;
+
+    console.log('[ART] Fetching completed tickets...');
+    try {
+      const response = await fetch(
+        'https://valmostagging.kapturecrm.com/api/version3/ticket/get-ticket-list',
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          // type=7 = "Completed by me", status=C = Complete
+          body: 'sort_by_column=last_conversation_time&type=7&status=C&folder_id=-1&query=&page_no=0&sort_type=desc&page_size=100&response_type=json&key_beautify=yes&isElasticSearch=true'
+        }
+      );
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+
+      if (data.status === 'Success' && data.response?.tickets) {
+        console.log(`[ART] Got ${data.response.tickets.length} completed tickets`);
+
+        // Only process tickets not already stored to avoid redundant API calls
+        const { artTickets = {} } = await chrome.storage.local.get(['artTickets']);
+
+        for (const ticket of data.response.tickets) {
+          if (!artTickets[ticket.ticketId]) {
+            await this.processCompletedTicketForART(ticket, artTickets);
+          }
+        }
+
+        // Recalculate summary and persist
+        await this.saveARTData(artTickets);
+      }
+    } catch (error) {
+      console.error('[ART] Fetch failed:', error.message);
+    }
+  }
+
+  async processCompletedTicketForART(ticket, artTickets) {
+    try {
+      const histResponse = await fetch(
+        `https://valmostagging.kapturecrm.com/api/version3/ticket/get-ticket-detail?id=${ticket.id}&data_type=history&cdate=${encodeURIComponent(ticket.date)}&fetch_action_name=yes`,
+        { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }
+      );
+
+      if (!histResponse.ok) return;
+      const histData = await histResponse.json();
+      if (histData.status !== 'Success' || !histData.response?.history) return;
+
+      const history    = histData.response.history;
+      const responseObj = histData.response;
+
+      // ── Resolution time ──────────────────────────────────────────
+      // Use lastResolvedTime from the response envelope — most reliable.
+      // Fallback: scan for DISPOSED with substatus=RS (Resolved).
+      const lastResolvedStr = responseObj.lastResolvedTime;
+      if (!lastResolvedStr) return; // ticket not resolved, skip
+
+      const resolvedTime = this.parseDate(lastResolvedStr);
+
+      // ── Queue ────────────────────────────────────────────────────
+      // queueName is on every history event; grab it from the DISPOSED(RS) event.
+      // This gives the actual Kapture queue ("Losses and Debits", "Payments", etc.)
+      // and eliminates the keyword-matching "General" fallback.
+      const resolvedDisposed = history.find(
+        h => h.action === 'DISPOSED' && h.substatus === 'RS'
+      );
+      const sopCategory = resolvedDisposed?.queueName
+                          || this.matchSOPCategory(ticket.taskTitle).category;
+
+      // ── Assignment time ─────────────────────────────────────────
+      // History is oldest-first. Find the LAST MANUAL ASSIGNED event
+      // that occurred before the resolution — that is when the resolving
+      // agent actually received the ticket (not first-ever assignment).
+      const resolvedIdx  = resolvedDisposed ? history.indexOf(resolvedDisposed) : history.length;
+      const assignments  = history.slice(0, resolvedIdx).filter(h => h.action === 'MANUAL ASSIGNED');
+      if (assignments.length === 0) return;
+      const agentAssignment = assignments[assignments.length - 1]; // last before resolution
+
+      const assignedTime = this.parseDate(agentAssignment.createDate);
+      const artHours     = Math.max(0, (resolvedTime - assignedTime) / (1000 * 60 * 60));
+
+      // ── Reopen ───────────────────────────────────────────────────
+      // API provides isReopned (their typo) directly — use it.
+      const wasReopened = responseObj.isReopned === true;
+
+      artTickets[ticket.ticketId] = {
+        ticketId:     ticket.ticketId,
+        subject:      ticket.taskTitle,
+        sopCategory,
+        assignedTime,
+        resolvedTime,
+        artHours:     Math.round(artHours * 10) / 10,
+        wasReopened,
+        resolvedDate: new Date(resolvedTime).toISOString().slice(0, 10)
+      };
+
+      console.log(`[ART] Ticket ${ticket.ticketId}: ${artHours.toFixed(1)}h | ${sopCategory}${wasReopened ? ' (REOPENED)' : ''}`);
+
+    } catch (err) {
+      console.error('[ART] Error processing ticket:', err.message);
+    }
+  }
+
+  extractQueueFromRemark(remark = '') {
+    // "Folder Level: Web Form | Captain | Losses & Debits | Wrong loss..."
+    const match = remark.match(/Folder Level:[^|]+\|[^|]+\|([^|]+)\|/);
+    return match ? match[1].trim() : null;
+  }
+
+  async saveARTData(artTickets) {
+    const tickets = Object.values(artTickets);
+    if (tickets.length === 0) return;
+
+    // Overall ART
+    const overallART = tickets.reduce((s, t) => s + t.artHours, 0) / tickets.length;
+
+    // ART by queue
+    const artByQueue = {};
+    const countByQueue = {};
+    tickets.forEach(t => {
+      artByQueue[t.sopCategory]   = (artByQueue[t.sopCategory]   || 0) + t.artHours;
+      countByQueue[t.sopCategory] = (countByQueue[t.sopCategory] || 0) + 1;
+    });
+    Object.keys(artByQueue).forEach(q => {
+      artByQueue[q] = Math.round((artByQueue[q] / countByQueue[q]) * 10) / 10;
+    });
+
+    // Queue with most tickets
+    const topQueue = Object.entries(countByQueue).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
+
+    // Reopen rate
+    const reopenRate = Math.round((tickets.filter(t => t.wasReopened).length / tickets.length) * 100);
+
+    // Last 7 days trend
+    const byDate = {};
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    tickets.filter(t => t.resolvedTime > cutoff).forEach(t => {
+      const d = t.resolvedDate;
+      if (!byDate[d]) byDate[d] = { count: 0, totalART: 0 };
+      byDate[d].count++;
+      byDate[d].totalART += t.artHours;
+    });
+
+    const artSummary = {
+      lastCalculated: Date.now(),
+      totalResolved:  tickets.length,
+      overallART:     Math.round(overallART * 10) / 10,
+      artByQueue,
+      countByQueue,
+      topQueue,
+      reopenRate,
+      byDate
+    };
+
+    await chrome.storage.local.set({ artTickets, artSummary });
+    console.log('[ART] Summary saved:', artSummary);
+
+    // Sync to Supabase for the admin LMS dashboard
+    if (typeof supabaseSync !== 'undefined') {
+      const { userEmail } = await chrome.storage.local.get(['userEmail']);
+      if (userEmail) {
+        supabaseSync.syncARTMetrics(userEmail, artSummary, artByQueue, countByQueue, 0);
+      }
+    }
   }
 }
 
@@ -414,7 +597,8 @@ const tatTrackerBG = new TATTrackerBackground();
 // Auto-start ONLY on Kapture domain
 if (window.location.hostname.includes('kapturecrm.com')) {
   tatTrackerBG.start();
-  console.log('[TAT Tracker BG] Started (Kapture detected)');
+  tatTrackerBG.startARTTracking();
+  console.log('[TAT Tracker BG] Started (Kapture detected) + ART tracking');
 } else {
   console.log('[TAT Tracker BG] Skipped (not on Kapture domain)');
 }

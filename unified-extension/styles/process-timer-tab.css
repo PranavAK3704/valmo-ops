@@ -24,7 +24,7 @@
 
 .timer-search-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #F43397;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -83,10 +83,10 @@
 .timer-active-card {
   margin: 20px;
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #F43397 0%, #9747FF 100%);
   border-radius: 12px;
   color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(244, 51, 151, 0.3);
 }
 
 .timer-active-header {
@@ -106,13 +106,28 @@
   flex: 1;
 }
 
-.timer-display {
-  font-size: 48px;
-  font-weight: 700;
-  text-align: center;
-  margin: 20px 0;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 2px;
+.timer-timestamps {
+  margin: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timer-ts-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.timer-ts-label {
+  color: rgba(255,255,255,0.7);
+  font-weight: 500;
+}
+
+.timer-ts-value {
+  font-weight: 600;
+  color: white;
 }
 
 .timer-status {
@@ -266,7 +281,7 @@
 }
 
 .timer-sequence-count {
-  background: #667eea;
+  background: #F43397;
   color: white;
   padding: 2px 8px;
   border-radius: 12px;
@@ -292,8 +307,8 @@
 }
 
 .timer-sequence-item:hover {
-  border-color: #667eea;
-  background: #f0f3ff;
+  border-color: #F43397;
+  background: #FFF0F8;
   transform: translateX(5px);
 }
 
@@ -303,7 +318,7 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  background: #667eea;
+  background: #F43397;
   color: white;
   border-radius: 50%;
   font-size: 12px;
@@ -330,8 +345,8 @@
    ============================================ */
 
 @media (max-width: 400px) {
-  .timer-display {
-    font-size: 36px;
+  .timer-ts-value {
+    font-size: 12px;
   }
 
   .timer-active-card {

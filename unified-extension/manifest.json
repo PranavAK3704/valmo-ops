@@ -54,6 +54,7 @@
       "js": [
         "config.js",
         "sheets-sync.js",
+        "supabase-sync.js",
         "process-progress.js",
         "gamification/gamification-system.js",
         "gamification/my-stats-tab.js",
@@ -63,6 +64,7 @@
         "tat-system/tat-tracker-background.js",
         "tat-system/tat-analytics.js",
         "tat-system/tat-dashboard-ui.js",
+        "tat-system/art-metrics-ui.js",
         "smart-chatbot.js",
         "sc-manager/metabase-queries.js",
         "sc-manager/sc-dashboard.js",

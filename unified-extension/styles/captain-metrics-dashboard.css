@@ -49,7 +49,7 @@
 }
 
 .metrics-card:hover {
-  border-color: #667eea;
+  border-color: #F43397;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
   transform: translateY(-2px);
 }
@@ -118,7 +118,7 @@
 
 .metrics-chart-bar {
   flex: 1;
-  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(180deg, #F43397 0%, #9747FF 100%);
   border-radius: 2px;
   min-height: 2px;
   opacity: 0.7;
@@ -174,7 +174,22 @@
 .metrics-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
+  table-layout: fixed;
+}
+
+.metrics-table .col-process {
+  width: 36%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 0; /* enables text-overflow with table-layout:fixed */
+}
+
+.metrics-table .col-num {
+  width: 12.8%;
+  white-space: nowrap;
+  text-align: center;
 }
 
 .metrics-table thead {
@@ -183,17 +198,21 @@
 
 .metrics-table th {
   text-align: left;
-  padding: 10px 12px;
+  padding: 8px 4px;
   font-weight: 600;
   color: #666;
   border-bottom: 2px solid #e0e0e0;
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+}
+
+.metrics-table th.col-num {
+  text-align: center;
 }
 
 .metrics-table td {
-  padding: 12px;
+  padding: 10px 4px;
   border-bottom: 1px solid #f0f0f0;
   color: #333;
 }
@@ -204,7 +223,7 @@
 
 .metrics-table-process {
   font-weight: 600;
-  color: #667eea;
+  color: #F43397;
 }
 
 /* ============================================

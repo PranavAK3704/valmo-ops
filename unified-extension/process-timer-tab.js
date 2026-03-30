@@ -1,39 +1,26 @@
 /**
  * process-timer-tab.js - Captain Process Timer UI
- * 
- * Adds "⏱️ Timer" tab to Captain sidebar with:
- * - Process search bar
- * - Active process card with live timer
- * - Pause/Resume/Complete buttons
- * - Personal sequence display
+ *
+ * Injects search + active-process card into the Videos tab (no separate Timer tab).
+ * Displays start/pause timestamps instead of a running clock for cleaner UX.
  */
 
 class ProcessTimerTab {
   constructor() {
-    this.timerInterval = null;
+    this.syncInterval = null;
     this.initialized = false;
   }
 
   /**
-   * Initialize and inject tab into sidebar
+   * Initialize and inject content into the Videos tab
    */
   async init() {
     console.log('[Timer Tab] Initializing...');
 
-    // Wait for sidebar to exist
     await this.waitForSidebar();
-
-    // Inject tab button
-    this.injectTabButton();
-
-    // Inject tab content
-    this.injectTabContent();
-
-    // Attach event listeners
+    this.injectContent();
     this.attachEventListeners();
-
-    // Start UI update loop
-    this.startUIUpdateLoop();
+    this.startSyncLoop();
 
     this.initialized = true;
     console.log('[Timer Tab] ✅ Initialized');
@@ -45,118 +32,87 @@ class ProcessTimerTab {
   async waitForSidebar() {
     return new Promise((resolve) => {
       const check = setInterval(() => {
-        const nav = document.querySelector('.valmo-nav');
-        if (nav) {
+        if (document.querySelector('.valmo-nav')) {
           clearInterval(check);
           resolve();
         }
       }, 100);
-
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        clearInterval(check);
-        resolve();
-      }, 10000);
+      setTimeout(() => { clearInterval(check); resolve(); }, 10000);
     });
   }
 
   /**
-   * Inject tab button into navigation
+   * Inject search + active-process card into #videos-view (before the process list)
    */
-  injectTabButton() {
-    const nav = document.querySelector('.valmo-nav');
-    if (!nav) {
-      console.warn('[Timer Tab] Navigation not found');
+  injectContent() {
+    const videosView = document.getElementById('videos-view');
+    if (!videosView) {
+      console.warn('[Timer Tab] #videos-view not found');
       return;
     }
 
-    // Check if already exists
-    if (document.querySelector('[data-tab="timer"]')) {
-      console.log('[Timer Tab] Tab button already exists');
+    if (document.getElementById('timer-integrated')) {
+      console.log('[Timer Tab] Content already exists');
       return;
     }
 
-    const timerBtn = document.createElement('button');
-    timerBtn.className = 'valmo-nav-btn';
-    timerBtn.dataset.tab = 'timer';
-    timerBtn.innerHTML = '⏱️ Timer';
+    const wrapper = document.createElement('div');
+    wrapper.id = 'timer-integrated';
+    wrapper.innerHTML = this.getHTML();
 
-    // Insert after Videos tab
-    const videosBtn = document.querySelector('[data-tab="videos"]');
-    if (videosBtn) {
-      videosBtn.insertAdjacentElement('afterend', timerBtn);
+    // Insert before the process list so search appears at the top
+    const processList = document.getElementById('valmo-process-list');
+    if (processList) {
+      videosView.insertBefore(wrapper, processList);
     } else {
-      nav.appendChild(timerBtn);
+      videosView.prepend(wrapper);
     }
 
-    console.log('[Timer Tab] ✅ Tab button injected');
+    console.log('[Timer Tab] ✅ Content injected into Videos tab');
   }
 
   /**
-   * Inject tab content area
+   * HTML for the search bar + active process card
    */
-  injectTabContent() {
-    const content = document.querySelector('.valmo-content');
-    if (!content) {
-      console.warn('[Timer Tab] Content area not found');
-      return;
-    }
-
-    // Check if already exists
-    if (document.getElementById('timer-view')) {
-      console.log('[Timer Tab] Tab content already exists');
-      return;
-    }
-
-    const timerView = document.createElement('div');
-    timerView.id = 'timer-view';
-    timerView.className = 'valmo-view';
-    timerView.innerHTML = this.getTabHTML();
-
-    content.appendChild(timerView);
-
-    console.log('[Timer Tab] ✅ Tab content injected');
-  }
-
-  /**
-   * Get tab HTML
-   */
-  getTabHTML() {
+  getHTML() {
     return `
-      <!-- Search Bar -->
-      <div class="timer-search-section">
-        <input 
-          type="text" 
-          id="timer-process-search" 
-          class="timer-search-input" 
-          placeholder="🔍 Search processes..."
+      <!-- Process Search -->
+      <div class="timer-search-section" id="timer-search-section">
+        <input
+          type="text"
+          id="timer-process-search"
+          class="timer-search-input"
+          placeholder="🔍 Search & start a process..."
         />
-        <div id="timer-search-results" class="timer-search-results"></div>
+        <div id="timer-search-results" class="timer-search-results" style="display:none;"></div>
       </div>
 
       <!-- Active Process Card -->
-      <div id="timer-active-card" class="timer-active-card" style="display: none;">
+      <div id="timer-active-card" class="timer-active-card" style="display:none;">
         <div class="timer-active-header">
-          <span class="timer-active-icon">⏱️</span>
-          <span class="timer-active-title" id="timer-active-process">No Process</span>
+          <span class="timer-active-icon">⚙️</span>
+          <span class="timer-active-title" id="timer-active-process">—</span>
         </div>
-        
-        <div class="timer-display" id="timer-display">00:00</div>
-        
+
+        <div class="timer-timestamps" id="timer-timestamps">
+          <div class="timer-ts-row">
+            <span class="timer-ts-label">Started</span>
+            <span class="timer-ts-value" id="timer-start-ts">—</span>
+          </div>
+          <div class="timer-ts-row" id="timer-pause-ts-row" style="display:none;">
+            <span class="timer-ts-label">Paused at</span>
+            <span class="timer-ts-value" id="timer-pause-ts">—</span>
+          </div>
+        </div>
+
         <div class="timer-status" id="timer-status">
           <span class="timer-status-badge running">● Running</span>
         </div>
 
         <div class="timer-actions">
-          <button id="timer-pause-btn" class="timer-btn timer-btn-pause">
-            ⏸ Pause
-          </button>
-          <button id="timer-resume-btn" class="timer-btn timer-btn-resume" style="display: none;">
-            ▶️ Resume
-          </button>
-          <button id="timer-complete-btn" class="timer-btn timer-btn-complete">
-            ✓ Complete
-          </button>
+          <button id="timer-pause-btn" class="timer-btn timer-btn-pause">⏸ Pause</button>
+          <button id="timer-resume-btn" class="timer-btn timer-btn-resume" style="display:none;">▶️ Resume</button>
+          <button id="timer-complete-btn" class="timer-btn timer-btn-complete">✓ Complete</button>
         </div>
 
         <div class="timer-metrics">
@@ -171,11 +127,10 @@ class ProcessTimerTab {
         </div>
       </div>
 
-      <!-- No Active Process -->
+      <!-- No Active Process placeholder -->
       <div id="timer-no-process" class="timer-no-process">
         <div class="timer-empty-icon">🎯</div>
-        <h3>No Active Process</h3>
-        <p>Search and start a process above</p>
+        <p>Search above to start a process</p>
       </div>
 
       <!-- Personal Sequence -->
@@ -192,53 +147,35 @@ class ProcessTimerTab {
   }
 
   /**
-   * Attach event listeners
+   * Attach event listeners (no tab-switching needed — we're inside Videos tab)
    */
   attachEventListeners() {
-    // Tab switching
-    const timerTabBtn = document.querySelector('[data-tab="timer"]');
-    if (timerTabBtn) {
-      timerTabBtn.addEventListener('click', () => {
-        document.querySelectorAll('.valmo-nav-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.valmo-view').forEach(v => v.classList.remove('active'));
-
-        timerTabBtn.classList.add('active');
-        document.getElementById('timer-view').classList.add('active');
-      });
-    }
-
     // Search input
     const searchInput = document.getElementById('timer-process-search');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => this.handleSearch(e.target.value));
       searchInput.addEventListener('focus', () => {
-        document.getElementById('timer-search-results').style.display = 'block';
+        if (searchInput.value) {
+          document.getElementById('timer-search-results').style.display = 'block';
+        }
       });
     }
 
     // Pause button
-    const pauseBtn = document.getElementById('timer-pause-btn');
-    if (pauseBtn) {
-      pauseBtn.addEventListener('click', () => this.handlePause());
-    }
+    document.getElementById('timer-pause-btn')?.addEventListener('click', () => this.handlePause());
 
     // Resume button
-    const resumeBtn = document.getElementById('timer-resume-btn');
-    if (resumeBtn) {
-      resumeBtn.addEventListener('click', () => this.handleResume());
-    }
+    document.getElementById('timer-resume-btn')?.addEventListener('click', () => this.handleResume());
 
     // Complete button
-    const completeBtn = document.getElementById('timer-complete-btn');
-    if (completeBtn) {
-      completeBtn.addEventListener('click', () => this.handleComplete());
-    }
+    document.getElementById('timer-complete-btn')?.addEventListener('click', () => this.handleComplete());
 
     // Click outside search to close results
     document.addEventListener('click', (e) => {
-      const searchSection = document.querySelector('.timer-search-section');
-      if (searchSection && !searchSection.contains(e.target)) {
-        document.getElementById('timer-search-results').style.display = 'none';
+      const section = document.getElementById('timer-search-section');
+      if (section && !section.contains(e.target)) {
+        const results = document.getElementById('timer-search-results');
+        if (results) results.style.display = 'none';
       }
     });
 
@@ -253,11 +190,12 @@ class ProcessTimerTab {
     if (!resultsEl) return;
 
     if (!query) {
-      resultsEl.innerHTML = '<div class="timer-search-empty">Type to search processes...</div>';
+      resultsEl.style.display = 'none';
       return;
     }
 
-    const results = window.captainTimerSystem.searchProcesses(query);
+    const results = window.captainTimerSystem?.searchProcesses(query) || [];
+    resultsEl.style.display = 'block';
 
     if (results.length === 0) {
       resultsEl.innerHTML = '<div class="timer-search-empty">No processes found</div>';
@@ -271,33 +209,24 @@ class ProcessTimerTab {
       </div>
     `).join('');
 
-    // Add click handlers
     resultsEl.querySelectorAll('.timer-search-result').forEach(result => {
-      result.addEventListener('click', () => {
-        const processName = result.dataset.process;
-        this.startProcess(processName);
-      });
+      result.addEventListener('click', () => this.startProcess(result.dataset.process));
     });
-
-    resultsEl.style.display = 'block';
   }
 
   /**
    * Start a process
    */
   async startProcess(processName) {
-    const success = await window.captainTimerSystem.startProcess(processName);
+    const success = await window.captainTimerSystem?.startProcess(processName);
 
     if (!success) {
       alert('Please complete the current process first');
       return;
     }
 
-    // Clear search
     document.getElementById('timer-process-search').value = '';
     document.getElementById('timer-search-results').style.display = 'none';
-
-    // Update UI
     this.updateUI();
 
     console.log('[Timer Tab] Started:', processName);
@@ -307,45 +236,27 @@ class ProcessTimerTab {
    * Handle pause button
    */
   async handlePause() {
-    // Pause the timer
-    const pause = await window.captainTimerSystem.pauseProcess('Paused to resolve issue');
+    const pause = await window.captainTimerSystem?.pauseProcess('Paused to resolve issue');
 
     if (!pause) {
       alert('Failed to pause process');
       return;
     }
 
-    // Show pause modal
     if (window.captainPauseModal) {
       window.captainPauseModal.show(pause);
-    } else {
-      console.error('[Timer Tab] Pause modal not loaded');
-      
-      // Fallback: show simple prompt
-      const reason = prompt('Why are you pausing?\n(This helps track knowledge gaps)');
-      if (reason) {
-        // Update pause reason
-        pause.reason = reason;
-      }
     }
 
-    // Update UI
     this.updateUI();
-
     console.log('[Timer Tab] Paused');
   }
 
   /**
-   * Handle resume button
+   * Handle resume button (direct resume without pause modal)
    */
   async handleResume() {
-    // For now, simple resume
-    // TODO: Integrate with pause modal resolution (Phase 3)
-    await window.captainTimerSystem.resumeProcess('manual', true);
-
-    // Update UI
+    await window.captainTimerSystem?.resumeProcess('manual', true);
     this.updateUI();
-
     console.log('[Timer Tab] Resumed');
   }
 
@@ -353,41 +264,52 @@ class ProcessTimerTab {
    * Handle complete button
    */
   async handleComplete() {
-    const confirmed = confirm('Mark this process as complete?');
-
-    if (!confirmed) return;
-
-    await window.captainTimerSystem.stopProcess();
-
-    // Update UI
+    if (!confirm('Mark this process as complete?')) return;
+    await window.captainTimerSystem?.stopProcess();
     this.updateUI();
-
     console.log('[Timer Tab] Completed');
+  }
+
+  /**
+   * Format a timestamp as "2:45 PM, 27 Mar"
+   */
+  formatTimestamp(ms) {
+    return new Date(ms).toLocaleString('en-IN', {
+      hour: '2-digit', minute: '2-digit',
+      day: 'numeric', month: 'short'
+    });
   }
 
   /**
    * Update UI based on current session state
    */
   updateUI() {
-    const session = window.captainTimerSystem.getCurrentSession();
+    const session = window.captainTimerSystem?.getCurrentSession();
 
     const activeCard = document.getElementById('timer-active-card');
     const noProcess = document.getElementById('timer-no-process');
 
+    if (!activeCard || !noProcess) return;
+
     if (session) {
-      // Show active card
       activeCard.style.display = 'block';
       noProcess.style.display = 'none';
 
-      // Update process name
       document.getElementById('timer-active-process').textContent = session.process_name;
 
-      // Update timer display
-      const elapsed = window.captainTimerSystem.getElapsedTime();
-      document.getElementById('timer-display').textContent = 
-        window.captainTimerSystem.formatTime(elapsed);
+      // Timestamps instead of running clock
+      document.getElementById('timer-start-ts').textContent = this.formatTimestamp(session.start_time);
 
-      // Update status
+      const pauseRow = document.getElementById('timer-pause-ts-row');
+      if (!session.timer_running && session.pauses.length > 0) {
+        const lastPause = session.pauses[session.pauses.length - 1];
+        document.getElementById('timer-pause-ts').textContent = this.formatTimestamp(lastPause.pause_time);
+        pauseRow.style.display = 'flex';
+      } else {
+        pauseRow.style.display = 'none';
+      }
+
+      // Status + buttons
       const statusEl = document.getElementById('timer-status');
       const pauseBtn = document.getElementById('timer-pause-btn');
       const resumeBtn = document.getElementById('timer-resume-btn');
@@ -402,17 +324,14 @@ class ProcessTimerTab {
         resumeBtn.style.display = 'inline-block';
       }
 
-      // Update metrics
       document.getElementById('timer-pause-count').textContent = session.pauses.length;
       document.getElementById('timer-query-count').textContent = session.queries.length;
 
     } else {
-      // No active session
       activeCard.style.display = 'none';
       noProcess.style.display = 'block';
     }
 
-    // Update personal sequence
     this.updateSequenceDisplay();
   }
 
@@ -420,7 +339,7 @@ class ProcessTimerTab {
    * Update personal sequence display
    */
   updateSequenceDisplay() {
-    const sequence = window.captainTimerSystem.getPersonalSequence();
+    const sequence = window.captainTimerSystem?.getPersonalSequence() || [];
     const listEl = document.getElementById('timer-sequence-list');
     const countEl = document.getElementById('timer-sequence-count');
 
@@ -440,39 +359,21 @@ class ProcessTimerTab {
       </div>
     `).join('');
 
-    // Add click handlers
     listEl.querySelectorAll('.timer-sequence-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const processName = item.dataset.process;
-        this.startProcess(processName);
-      });
+      item.addEventListener('click', () => this.startProcess(item.dataset.process));
     });
   }
 
   /**
-   * Start UI update loop
+   * Sync UI every 30s (no per-second ticking needed since we show timestamps)
    */
-  startUIUpdateLoop() {
-    // Update UI every second
-    this.timerInterval = setInterval(() => {
-      const session = window.captainTimerSystem.getCurrentSession();
-
-      if (session && session.timer_running) {
-        const elapsed = window.captainTimerSystem.getElapsedTime();
-        const displayEl = document.getElementById('timer-display');
-        if (displayEl) {
-          displayEl.textContent = window.captainTimerSystem.formatTime(elapsed);
-        }
-      }
-    }, 1000);
+  startSyncLoop() {
+    this.syncInterval = setInterval(() => this.updateUI(), 30000);
   }
 
-  /**
-   * Escape HTML
-   */
   escape(str) {
     const div = document.createElement('div');
-    div.textContent = str;
+    div.textContent = str || '';
     return div.innerHTML;
   }
 }
@@ -480,7 +381,5 @@ class ProcessTimerTab {
 // Global instance
 window.processTimerTab = new ProcessTimerTab();
 
-// Auto-initialize is handled by content.js
-// This file just provides the ProcessTimerTab class
-
+// Auto-initialization is triggered by captain-timer-system.js after INIT_CAPTAIN_TIMER
 console.log('[Timer Tab] Script loaded');

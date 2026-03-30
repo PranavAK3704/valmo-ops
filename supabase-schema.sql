@@ -1,0 +1,273 @@
+-- ================================================================
+-- Valmo Ops LMS — Supabase Schema
+-- Run this in: Supabase Dashboard → SQL Editor → New Query
+-- ================================================================
+
+-- Agent profiles (one row per user, upserted on login)
+CREATE TABLE IF NOT EXISTS agent_profiles (
+  email          TEXT PRIMARY KEY,
+  role           TEXT,
+  hub            TEXT,
+  level          INTEGER DEFAULT 1,
+  total_xp       INTEGER DEFAULT 0,
+  streak_current INTEGER DEFAULT 0,
+  streak_longest INTEGER DEFAULT 0,
+  videos_watched INTEGER DEFAULT 0,
+  assessments_passed INTEGER DEFAULT 0,
+  avg_score      NUMERIC(5,2) DEFAULT 0,
+  last_active    TIMESTAMPTZ DEFAULT NOW(),
+  created_at     TIMESTAMPTZ DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Gamification events (append-only log — every XP earn, achievement, level-up)
+CREATE TABLE IF NOT EXISTS gamification_events (
+  id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email          TEXT NOT NULL,
+  event_type     TEXT NOT NULL, -- xp_earned | achievement_unlocked | level_up | streak_bonus
+  xp_amount      INTEGER DEFAULT 0,
+  reason         TEXT,
+  process_name   TEXT,
+  new_level      INTEGER,
+  achievement_id TEXT,
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_gam_events_email   ON gamification_events(email);
+CREATE INDEX IF NOT EXISTS idx_gam_events_created ON gamification_events(created_at DESC);
+
+-- Captain sessions (one row per completed process session)
+CREATE TABLE IF NOT EXISTS captain_sessions (
+  id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id   TEXT UNIQUE NOT NULL,
+  email        TEXT NOT NULL,
+  process_name TEXT NOT NULL,
+  pct          INTEGER,  -- Process Cycle Time (seconds)
+  total_pkrt   INTEGER,  -- Total pause time (seconds)
+  pause_count  INTEGER DEFAULT 0,
+  query_count  INTEGER DEFAULT 0,
+  error_count  INTEGER DEFAULT 0,
+  started_at   TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_cap_sessions_email   ON captain_sessions(email);
+CREATE INDEX IF NOT EXISTS idx_cap_sessions_process ON captain_sessions(process_name);
+CREATE INDEX IF NOT EXISTS idx_cap_sessions_date    ON captain_sessions(completed_at DESC);
+
+-- L1 ART metrics — daily snapshot per agent per queue
+CREATE TABLE IF NOT EXISTS l1_art_metrics (
+  id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email        TEXT NOT NULL,
+  date         DATE NOT NULL,
+  queue        TEXT NOT NULL,
+  art_hours    NUMERIC(8,2),
+  ticket_count INTEGER DEFAULT 0,
+  reopen_count INTEGER DEFAULT 0,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(email, date, queue)
+);
+CREATE INDEX IF NOT EXISTS idx_art_email ON l1_art_metrics(email);
+CREATE INDEX IF NOT EXISTS idx_art_date  ON l1_art_metrics(date DESC);
+
+-- Simulations (created by admin via slides-to-sim pipeline)
+CREATE TABLE IF NOT EXISTS simulations (
+  id           TEXT PRIMARY KEY,
+  title        TEXT NOT NULL,
+  process_name TEXT,
+  hub          TEXT,
+  step_count   INTEGER DEFAULT 0,
+  steps_json   JSONB,
+  created_by   TEXT,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Simulation completions (one row per agent per sim, upserted on replay)
+CREATE TABLE IF NOT EXISTS sim_completions (
+  id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email        TEXT NOT NULL,
+  sim_id       TEXT NOT NULL,
+  process_name TEXT,
+  score        INTEGER,       -- 0–100
+  mode         TEXT,          -- guided | practice
+  time_seconds INTEGER,
+  completed_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(email, sim_id)
+);
+CREATE INDEX IF NOT EXISTS idx_sim_completions_email  ON sim_completions(email);
+CREATE INDEX IF NOT EXISTS idx_sim_completions_sim_id ON sim_completions(sim_id);
+
+-- LMS admin portal users (educators + admins who log into the web portal)
+CREATE TABLE IF NOT EXISTS lms_portal_users (
+  email      TEXT PRIMARY KEY,
+  name       TEXT,
+  role       TEXT NOT NULL DEFAULT 'educator', -- educator | admin
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  last_sign_in_at TIMESTAMPTZ
+);
+
+-- LMS configuration key-value store (XP weights, feature flags, etc.)
+CREATE TABLE IF NOT EXISTS lms_config (
+  key        TEXT PRIMARY KEY,
+  value      JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed default XP weights if not already present
+INSERT INTO lms_config (key, value) VALUES (
+  'xp_weights',
+  '{"sim_complete":50,"sim_perfect_score":100,"streak_bonus":25,"first_time_process":30,"daily_login":10,"assessment_pass":75,"captain_no_error":40}'::jsonb
+) ON CONFLICT (key) DO NOTHING;
+
+-- ── Access policy: internal tool, anon key is safe ──────────────
+-- Disable RLS so the extension's anon key can INSERT/SELECT freely.
+-- Revisit when adding external auth.
+ALTER TABLE agent_profiles      DISABLE ROW LEVEL SECURITY;
+ALTER TABLE gamification_events DISABLE ROW LEVEL SECURITY;
+ALTER TABLE captain_sessions    DISABLE ROW LEVEL SECURITY;
+ALTER TABLE l1_art_metrics      DISABLE ROW LEVEL SECURITY;
+ALTER TABLE simulations         DISABLE ROW LEVEL SECURITY;
+ALTER TABLE sim_completions     DISABLE ROW LEVEL SECURITY;
+ALTER TABLE lms_portal_users    DISABLE ROW LEVEL SECURITY;
+ALTER TABLE lms_config          DISABLE ROW LEVEL SECURITY;
+
+-- ── Helpful views for the admin portal ──────────────────────────
+
+-- Hub leaderboard (ordered by XP)
+CREATE OR REPLACE VIEW leaderboard AS
+SELECT
+  email,
+  role,
+  hub,
+  level,
+  total_xp,
+  streak_current,
+  streak_longest,
+  videos_watched,
+  assessments_passed,
+  avg_score,
+  last_active,
+  RANK() OVER (PARTITION BY hub ORDER BY total_xp DESC) AS hub_rank,
+  RANK() OVER (ORDER BY total_xp DESC)                  AS global_rank
+FROM agent_profiles
+ORDER BY total_xp DESC;
+
+-- Captain performance summary (last 30 days)
+CREATE OR REPLACE VIEW captain_performance AS
+SELECT
+  email,
+  COUNT(*)                            AS sessions,
+  ROUND(AVG(pct) / 60.0, 1)          AS avg_pct_min,
+  ROUND(AVG(total_pkrt) / 60.0, 1)   AS avg_pkrt_min,
+  ROUND(AVG(pause_count), 1)          AS avg_pauses,
+  ROUND(AVG(query_count), 1)          AS avg_queries,
+  SUM(error_count)                    AS total_errors,
+  MIN(completed_at)                   AS first_session,
+  MAX(completed_at)                   AS last_session
+FROM captain_sessions
+WHERE completed_at > NOW() - INTERVAL '30 days'
+GROUP BY email;
+
+-- L1 agent ART summary (latest per agent)
+CREATE OR REPLACE VIEW l1_performance AS
+SELECT
+  email,
+  ROUND(AVG(art_hours), 2)            AS avg_art_hours,
+  SUM(ticket_count)                   AS total_tickets,
+  SUM(reopen_count)                   AS total_reopens,
+  ROUND(SUM(reopen_count) * 100.0 / NULLIF(SUM(ticket_count), 0), 1) AS reopen_rate_pct,
+  MAX(date)                           AS last_updated
+FROM l1_art_metrics
+WHERE date > CURRENT_DATE - 30
+GROUP BY email;
+
+-- ================================================================
+-- TRIGGERS
+-- ================================================================
+
+-- Level thresholds: every 500 XP = 1 level (cap at 20)
+-- XP trigger: on every gamification_events INSERT, update agent_profiles
+CREATE OR REPLACE FUNCTION fn_apply_xp()
+RETURNS TRIGGER AS $$
+DECLARE
+  new_total INTEGER;
+  new_level  INTEGER;
+BEGIN
+  -- Upsert profile row so it always exists
+  INSERT INTO agent_profiles (email, role, total_xp, level, last_active)
+  VALUES (NEW.email, 'Captain', NEW.xp_amount, 1, NOW())
+  ON CONFLICT (email) DO UPDATE
+    SET total_xp    = agent_profiles.total_xp + NEW.xp_amount,
+        last_active = NOW(),
+        updated_at  = NOW();
+
+  -- Recalculate level based on new total
+  SELECT total_xp INTO new_total FROM agent_profiles WHERE email = NEW.email;
+  new_level := LEAST(20, GREATEST(1, (new_total / 500) + 1));
+
+  UPDATE agent_profiles
+  SET level = new_level
+  WHERE email = NEW.email AND level <> new_level;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_apply_xp ON gamification_events;
+CREATE TRIGGER trg_apply_xp
+  AFTER INSERT ON gamification_events
+  FOR EACH ROW
+  WHEN (NEW.xp_amount > 0)
+  EXECUTE FUNCTION fn_apply_xp();
+
+-- ================================================================
+-- SIM ASSIGNMENTS
+-- Admin assigns specific sims to specific hubs or individual captains
+-- ================================================================
+
+CREATE TABLE IF NOT EXISTS sim_assignments (
+  id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  sim_id       TEXT NOT NULL REFERENCES simulations(id) ON DELETE CASCADE,
+  assigned_to  TEXT NOT NULL,                -- hub name OR captain email
+  assign_type  TEXT NOT NULL DEFAULT 'hub',  -- 'hub' | 'captain'
+  is_mandatory BOOLEAN DEFAULT false,
+  due_date     DATE,
+  assigned_by  TEXT,
+  assigned_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_sim_assign_sim    ON sim_assignments(sim_id);
+CREATE INDEX IF NOT EXISTS idx_sim_assign_target ON sim_assignments(assigned_to);
+ALTER TABLE sim_assignments DISABLE ROW LEVEL SECURITY;
+
+-- View: mandatory sims a captain hasn't completed yet
+CREATE OR REPLACE VIEW captain_pending_sims AS
+SELECT
+  a.assigned_to   AS email,
+  a.sim_id,
+  s.title         AS sim_title,
+  s.process_name,
+  a.is_mandatory,
+  a.due_date,
+  c.completed_at  AS completed_at
+FROM sim_assignments a
+JOIN simulations s ON s.id = a.sim_id
+LEFT JOIN sim_completions c
+  ON c.sim_id = a.sim_id AND c.email = a.assigned_to
+WHERE a.assign_type = 'captain'
+UNION ALL
+-- Hub-level assignments expanded to each captain in that hub
+SELECT
+  p.email,
+  a.sim_id,
+  s.title,
+  s.process_name,
+  a.is_mandatory,
+  a.due_date,
+  c.completed_at
+FROM sim_assignments a
+JOIN simulations s ON s.id = a.sim_id
+JOIN agent_profiles p ON p.hub = a.assigned_to AND p.role = 'Captain'
+LEFT JOIN sim_completions c
+  ON c.sim_id = a.sim_id AND c.email = p.email
+WHERE a.assign_type = 'hub';

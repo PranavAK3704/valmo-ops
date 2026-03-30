@@ -47,10 +47,47 @@ function injectTATDashboard() {
 }
 
 /**
+ * Inject the Tickets / My Metrics toggle into the My Tickets tab
+ * Called once when the tab is first activated.
+ */
+function injectTicketsToggle() {
+  const container = document.getElementById('tat-dashboard-container');
+  if (!container || container.dataset.toggled) return;
+  container.dataset.toggled = 'true';
+
+  container.innerHTML = `
+    <div class="tickets-tab-toggle">
+      <button class="tickets-toggle-btn active" id="toggle-tickets">🎫 Tickets</button>
+      <button class="tickets-toggle-btn" id="toggle-metrics">📈 My Metrics</button>
+    </div>
+    <div id="tickets-panel"></div>
+    <div id="art-metrics-container" style="display:none"></div>
+  `;
+
+  document.getElementById('toggle-tickets').addEventListener('click', () => {
+    document.getElementById('toggle-tickets').classList.add('active');
+    document.getElementById('toggle-metrics').classList.remove('active');
+    document.getElementById('tickets-panel').style.display = '';
+    document.getElementById('art-metrics-container').style.display = 'none';
+  });
+
+  document.getElementById('toggle-metrics').addEventListener('click', () => {
+    document.getElementById('toggle-metrics').classList.add('active');
+    document.getElementById('toggle-tickets').classList.remove('active');
+    document.getElementById('tickets-panel').style.display = 'none';
+    document.getElementById('art-metrics-container').style.display = '';
+    loadARTMetrics();
+  });
+}
+
+/**
  * Load and render TAT dashboard
  */
 async function loadTATDashboard() {
-  const container = document.getElementById('tat-dashboard-container');
+  injectTicketsToggle();
+
+  const container = document.getElementById('tickets-panel') ||
+                    document.getElementById('tat-dashboard-container');
   if (!container) return;
   
   // Check if extension context is still valid
@@ -171,9 +208,10 @@ function calculateStats(tickets) {
 }
 
 /**
- * Render complete TAT dashboard
+ * Render complete TAT dashboard (SLA from Kapture removed — team SLAs coming soon)
  */
 function renderTATDashboard(grouped, stats, timeSinceUpdate) {
+  const allTickets = [...grouped.overdue, ...grouped.dueSoon, ...grouped.onTrack];
   return `
     <div class="tat-dashboard">
       <!-- Header -->
@@ -182,114 +220,60 @@ function renderTATDashboard(grouped, stats, timeSinceUpdate) {
           <h3>📊 My Tickets</h3>
           <span class="last-update">Updated ${timeSinceUpdate}s ago</span>
         </div>
-        <div style="display: flex; gap: 8px;">
-          <button class="refresh-btn" onclick="refreshTickets()">
-            🔄 Refresh
-          </button>
-          <button class="refresh-btn" onclick="exportTATAnalytics()" style="background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);">
-            📊 Export Excel
-          </button>
+        <button class="refresh-btn" onclick="refreshTickets()">
+          🔄 Refresh
+        </button>
+      </div>
+
+      <!-- SLA Coming Soon Banner -->
+      <div class="sla-coming-soon-banner">
+        <span class="sla-icon">📋</span>
+        <div>
+          <strong>SLA tracking coming soon</strong>
+          <p>Team-defined SLAs based on SOPs will appear here. Hang tight!</p>
         </div>
       </div>
-      
-      <!-- Stats Summary -->
+
+      <!-- Simple ticket count -->
       <div class="tat-stats">
-        <div class="stat-card total">
+        <div class="stat-card total" style="grid-column: 1 / -1;">
           <div class="stat-number">${stats.total}</div>
-          <div class="stat-label">Total Tickets</div>
-        </div>
-        <div class="stat-card overdue">
-          <div class="stat-number">${stats.overdue}</div>
-          <div class="stat-label">🔴 Overdue</div>
-        </div>
-        <div class="stat-card due-soon">
-          <div class="stat-number">${stats.dueSoon}</div>
-          <div class="stat-label">🟡 Due Soon</div>
-        </div>
-        <div class="stat-card on-track">
-          <div class="stat-number">${stats.onTrack}</div>
-          <div class="stat-label">🟢 On Track</div>
+          <div class="stat-label">Open Tickets</div>
         </div>
       </div>
-      
-      <!-- Overdue Tickets -->
-      ${grouped.overdue.length > 0 ? `
-        <div class="tat-section overdue-section">
-          <div class="section-header">
-            <span class="section-icon">🔴</span>
-            <h4>OVERDUE (${grouped.overdue.length})</h4>
-          </div>
-          <div class="ticket-list">
-            ${grouped.overdue.map(ticket => renderTicketCard(ticket)).join('')}
-          </div>
+
+      <!-- All Tickets (no urgency grouping) -->
+      <div class="tat-section">
+        <div class="section-header">
+          <h4>ALL TICKETS (${allTickets.length})</h4>
         </div>
-      ` : ''}
-      
-      <!-- Due Soon Tickets -->
-      ${grouped.dueSoon.length > 0 ? `
-        <div class="tat-section due-soon-section">
-          <div class="section-header">
-            <span class="section-icon">🟡</span>
-            <h4>DUE SOON (${grouped.dueSoon.length})</h4>
-          </div>
-          <div class="ticket-list">
-            ${grouped.dueSoon.map(ticket => renderTicketCard(ticket)).join('')}
-          </div>
+        <div class="ticket-list">
+          ${allTickets.map(ticket => renderTicketCard(ticket)).join('')}
         </div>
-      ` : ''}
-      
-      <!-- On Track Tickets -->
-      ${grouped.onTrack.length > 0 ? `
-        <div class="tat-section on-track-section">
-          <div class="section-header">
-            <span class="section-icon">🟢</span>
-            <h4>ON TRACK (${grouped.onTrack.length})</h4>
-            <button class="collapse-btn" onclick="toggleSection(this)">▼</button>
-          </div>
-          <div class="ticket-list collapsed">
-            ${grouped.onTrack.map(ticket => renderTicketCard(ticket)).join('')}
-          </div>
-        </div>
-      ` : ''}
+      </div>
     </div>
   `;
 }
 
 /**
- * Render individual ticket card
+ * Render individual ticket card (no Kapture SLA — team SLAs coming soon)
  */
 function renderTicketCard(ticket) {
-  const overdueHours = ticket.remainingHours < 0 ? Math.abs(ticket.remainingHours) : 0;
-  const timeDisplay = ticket.remainingHours < 0 
-    ? `${Math.floor(overdueHours)}h ${Math.round((overdueHours % 1) * 60)}m OVER`
-    : `${Math.floor(ticket.remainingHours)}h ${Math.round((ticket.remainingHours % 1) * 60)}m left`;
-  
   return `
-    <div class="ticket-card ${ticket.urgencyColor}" data-ticket-id="${ticket.ticketId}">
+    <div class="ticket-card">
       <div class="ticket-header">
         <span class="ticket-id">#${ticket.ticketId}</span>
-        <span class="ticket-category">${ticket.sopCategory}</span>
+        ${ticket.sopCategory ? `<span class="ticket-category">${ticket.sopCategory}</span>` : ''}
         ${ticket.isEscalated ? '<span class="escalated-badge">⚠️ Escalated</span>' : ''}
       </div>
-      
+
       <div class="ticket-subject">${escapeHtml(ticket.subject)}</div>
-      
+
       <div class="ticket-meta">
         <span class="ticket-customer">👤 ${escapeHtml(ticket.customerEmail)}</span>
         <span class="ticket-status">${ticket.substatusName}</span>
       </div>
-      
-      <div class="ticket-tat">
-        <div class="tat-info">
-          <span class="tat-icon">${ticket.urgencyIcon}</span>
-          <span class="tat-time ${ticket.urgencyColor}">${timeDisplay}</span>
-        </div>
-        <div class="tat-detail">
-          <span class="elapsed">Elapsed: ${ticket.elapsedHours}h</span>
-          <span class="tat-total">TAT: ${ticket.tatHours}h</span>
-        </div>
-      </div>
-      
+
       <div class="ticket-actions">
         <button class="open-ticket-btn" onclick="openTicket('${ticket.ticketURL}')">
           Open Ticket →
@@ -322,7 +306,6 @@ function attachTATDashboardListeners() {
     card.addEventListener('click', (e) => {
       if (e.target.closest('.open-ticket-btn')) return;
       
-      const ticketId = card.dataset.ticketId;
       const ticketURL = card.querySelector('.open-ticket-btn')?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
       if (ticketURL) {
         window.open(ticketURL, '_blank');

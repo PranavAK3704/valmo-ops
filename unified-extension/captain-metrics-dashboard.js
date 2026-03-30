@@ -232,10 +232,10 @@ class CaptainMetricsDashboard {
 
       // Simple linear regression
       const n = data.length;
-      const sumX = data.reduce((sum, d, i) => sum + i, 0);
+      const sumX = data.reduce((sum, _d, i) => sum + i, 0);
       const sumY = data.reduce((sum, d) => sum + d.queries, 0);
       const sumXY = data.reduce((sum, d, i) => sum + (i * d.queries), 0);
-      const sumXX = data.reduce((sum, d, i) => sum + (i * i), 0);
+      const sumXX = data.reduce((sum, _d, i) => sum + (i * i), 0);
 
       const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
 
@@ -648,12 +648,12 @@ class CaptainMetricsDashboard {
 
       return `
         <tr>
-          <td class="metrics-table-process">${this.escape(proc)}</td>
-          <td>${data.count}</td>
-          <td>${avgPCT} min</td>
-          <td>${avgPauses}</td>
-          <td>${avgQueries}</td>
-          <td>${data.totalErrors}</td>
+          <td class="metrics-table-process col-process">${this.escape(proc)}</td>
+          <td class="col-num">${data.count}</td>
+          <td class="col-num">${avgPCT}m</td>
+          <td class="col-num">${avgPauses}</td>
+          <td class="col-num">${avgQueries}</td>
+          <td class="col-num">${data.totalErrors}</td>
         </tr>
       `;
     }).join('');
@@ -664,12 +664,12 @@ class CaptainMetricsDashboard {
         <table class="metrics-table">
           <thead>
             <tr>
-              <th>Process</th>
-              <th>Sessions</th>
-              <th>Avg PCT</th>
-              <th>Avg Pauses</th>
-              <th>Avg Queries</th>
-              <th>Errors</th>
+              <th class="col-process">Process</th>
+              <th class="col-num">Sess</th>
+              <th class="col-num">PCT</th>
+              <th class="col-num">Pause</th>
+              <th class="col-num">Query</th>
+              <th class="col-num">Err</th>
             </tr>
           </thead>
           <tbody>

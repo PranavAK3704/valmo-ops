@@ -45,7 +45,7 @@ class CaptainTimerSystem {
   constructor() {
     this.currentSession = null;
     this.allProcesses = [];
-    this.processSequence = []; // Auto-built sequence for this captain
+    this.processFrequency = {}; // { processName: { count, lastUsed } } — decay-scored
     this.userEmail = null;
     this.initialized = false;
   }
@@ -53,9 +53,9 @@ class CaptainTimerSystem {
   /**
    * Initialize timer system for captain
    */
-  async init(userEmail, processes = []) {
+  async init(userEmail, processes = [], sequenceData = {}) {
     this.userEmail = userEmail;
-    
+
     console.log('[Captain Timer] Initializing for:', userEmail);
 
     // Use provided processes (from content script) or load them
@@ -66,8 +66,8 @@ class CaptainTimerSystem {
       await this.loadAllProcesses();
     }
 
-    // Load captain's personal sequence
-    await this.loadPersonalSequence();
+    // Load captain's personal sequence from chrome.storage.local data (passed via init message)
+    this.loadPersonalSequenceFromData(sequenceData);
 
     // Check for existing active session
     await this.restoreActiveSession();
@@ -98,29 +98,39 @@ class CaptainTimerSystem {
   }
 
   /**
-   * Load captain's personal sequence from storage
+   * Load captain's personal sequence from the data passed in the INIT message
+   * (which was pre-loaded from chrome.storage.local by the content script).
    */
-  async loadPersonalSequence() {
-    const key = `captain_sequence_${this.userEmail}`;
-    const result = await timerStorage.get([key]);
-    
-    if (result[key]) {
-      this.processSequence = result[key];
-      console.log(`[Captain Timer] Loaded sequence: ${this.processSequence.length} processes`);
+  loadPersonalSequenceFromData(data) {
+    if (!data || typeof data !== 'object') {
+      this.processFrequency = {};
+      console.log('[Captain Timer] No saved sequence — starting fresh');
+      return;
+    }
+    if (Array.isArray(data)) {
+      // Migrate old array format
+      const now = Date.now();
+      this.processFrequency = {};
+      data.forEach((name, i) => {
+        this.processFrequency[name] = { count: data.length - i, lastUsed: now - i * 86400000 };
+      });
+      console.log(`[Captain Timer] Migrated old sequence: ${Object.keys(this.processFrequency).length} processes`);
     } else {
-      this.processSequence = [];
-      console.log('[Captain Timer] No sequence yet - will build as captain works');
+      this.processFrequency = data;
+      console.log(`[Captain Timer] Loaded sequence from chrome.storage: ${Object.keys(this.processFrequency).length} processes`);
     }
   }
 
   /**
-   * Save captain's personal sequence
+   * Save captain's personal sequence via postMessage bridge.
+   * Content script receives this and saves to chrome.storage.local (persistent).
    */
-  async savePersonalSequence() {
-    const key = `captain_sequence_${this.userEmail}`;
-    await timerStorage.set({
-      [key]: this.processSequence
-    });
+  savePersonalSequence() {
+    window.postMessage({
+      type: 'CAPTAIN_SAVE_SEQUENCE',
+      email: this.userEmail,
+      data: this.processFrequency
+    }, '*');
   }
 
   /**
@@ -171,44 +181,32 @@ class CaptainTimerSystem {
   }
 
   /**
-   * Get next suggested process based on sequence
+   * Get next suggested process based on decay-sorted sequence
    */
   getNextProcess() {
-    if (this.processSequence.length === 0) {
-      return null; // No sequence yet
-    }
+    const sequence = this.getPersonalSequence();
+    if (sequence.length === 0) return null;
 
-    // Get last completed process from history
-    const lastCompleted = this.getLastCompletedProcess();
-    
-    if (!lastCompleted) {
-      // First process - suggest first in sequence
-      return this.processSequence[0];
-    }
+    const lastCompleted = this.getLastCompletedProcessSync();
+    if (!lastCompleted) return sequence[0];
 
-    // Find index of last completed
-    const lastIndex = this.processSequence.indexOf(lastCompleted);
-    
-    if (lastIndex === -1 || lastIndex === this.processSequence.length - 1) {
-      // Not in sequence or last one - suggest first (loop around)
-      return this.processSequence[0];
-    }
-
-    // Suggest next in sequence
-    return this.processSequence[lastIndex + 1];
+    const lastIndex = sequence.indexOf(lastCompleted);
+    if (lastIndex === -1 || lastIndex === sequence.length - 1) return sequence[0];
+    return sequence[lastIndex + 1];
   }
 
   /**
-   * Get last completed process name
+   * Get last completed process name synchronously from localStorage
    */
-  getLastCompletedProcess() {
-    const historyKey = `captain_session_history_${this.userEmail}`;
-    const result = timerStorage.get([historyKey]);
-    
-    if (result[historyKey] && result[historyKey].length > 0) {
-      return result[historyKey][0].process_name;
-    }
-    
+  getLastCompletedProcessSync() {
+    try {
+      const historyKey = `captain_session_history_${this.userEmail}`;
+      const stored = localStorage.getItem(historyKey);
+      if (stored) {
+        const history = JSON.parse(stored);
+        if (history.length > 0) return history[0].process_name;
+      }
+    } catch (e) {}
     return null;
   }
 
@@ -257,15 +255,17 @@ class CaptainTimerSystem {
   }
 
   /**
-   * Update captain's personal sequence
+   * Update captain's frequency map (called each time a process is started)
    */
   async updateSequence(processName) {
-    // Add to sequence if not already there
-    if (!this.processSequence.includes(processName)) {
-      this.processSequence.push(processName);
-      await this.savePersonalSequence();
-      console.log('[Captain Timer] Updated sequence:', this.processSequence);
+    const now = Date.now();
+    if (!this.processFrequency[processName]) {
+      this.processFrequency[processName] = { count: 0, lastUsed: now };
     }
+    this.processFrequency[processName].count += 1;
+    this.processFrequency[processName].lastUsed = now;
+    this.savePersonalSequence();
+    console.log('[Captain Timer] Updated frequency for:', processName);
   }
 
   /**
@@ -448,6 +448,23 @@ class CaptainTimerSystem {
 
     // Clear storage
     await timerStorage.remove(['captain_current_session']);
+
+    // Sync completed session to Supabase via content script bridge
+    window.postMessage({
+      type: 'SUPABASE_CAPTAIN_SESSION',
+      data: {
+        session_id:   completedSession.session_id,
+        email:        completedSession.captain_email,
+        process_name: completedSession.process_name,
+        pct:          metrics.pct,
+        total_pkrt:   metrics.total_pkrt,
+        pause_count:  metrics.pause_count,
+        query_count:  metrics.query_count,
+        error_count:  metrics.error_count,
+        started_at:   new Date(completedSession.start_time).toISOString(),
+        completed_at: new Date(completedSession.end_time).toISOString()
+      }
+    }, '*');
 
     // Show next process notification
     this.showNextProcessNotification();
@@ -662,10 +679,20 @@ class CaptainTimerSystem {
   }
 
   /**
-   * Get personal sequence
+   * Get personal sequence sorted by exponential decay score.
+   * score = count * exp(-0.1 * daysSinceLastUse)
+   * Higher count + more recent = higher score = appears first.
    */
   getPersonalSequence() {
-    return this.processSequence;
+    const now = Date.now();
+    const lambda = 0.1; // ~7-day half-life
+    return Object.entries(this.processFrequency)
+      .map(([name, { count, lastUsed }]) => {
+        const daysSince = (now - lastUsed) / 86400000;
+        return { name, score: count * Math.exp(-lambda * daysSince) };
+      })
+      .sort((a, b) => b.score - a.score)
+      .map(({ name }) => name);
   }
 }
 
@@ -677,8 +704,12 @@ window.addEventListener('message', async (event) => {
   if (event.data.type === 'INIT_CAPTAIN_TIMER') {
     console.log('[Captain Timer] Received init message');
     try {
+      // Store Groq credentials so pause modal can make real AI calls
+      window.captainGroqApiKey = event.data.groqApiKey || '';
+      window.captainSystemPrompt = event.data.systemPrompt || '';
+
       // Init with email and processes from content script
-      await window.captainTimerSystem.init(event.data.email, event.data.processes || []);
+      await window.captainTimerSystem.init(event.data.email, event.data.processes || [], event.data.sequence || {});
       
       // Initialize UI components
       if (window.processTimerTab) {

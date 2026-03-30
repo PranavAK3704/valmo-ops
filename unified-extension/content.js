@@ -57,17 +57,22 @@ function detectPlatform() {
 async function init() {
   currentPlatform = detectPlatform();
   
-  const result = await chrome.storage.local.get(['userEmail', 'userRole']);
-  
+  const result = await chrome.storage.local.get(['userEmail', 'userRole', 'userHub']);
+
   if (!result.userEmail) {
     console.log("[Valmo Ops] No user logged in");
     return;
   }
-  
-  currentUser = { email: result.userEmail, role: result.userRole };
+
+  currentUser = { email: result.userEmail, role: result.userRole, hub: result.userHub || null };
   console.log(`[Valmo Ops] ${currentUser.role} on ${currentPlatform}`);
-  
+
   analytics.log('session_start', { role: currentUser.role, platform: currentPlatform });
+
+  // Upsert agent profile in Supabase so the admin portal can see this user
+  if (typeof supabaseSync !== 'undefined') {
+    supabaseSync.syncProfile(currentUser);
+  }
   
   if (shouldShowOverlay()) {
     injectOverlay();
@@ -125,41 +130,84 @@ async function init() {
 
     // Initialize Captain Timer System by injecting into page context
     console.log('[Captain Timer] Injecting scripts into page context...');
-    
-    // Inject timer scripts into page
-    const scriptsToInject = [
-      'captain-timer-system.js',
-      'captain-pause-modal.js',
-      'process-timer-tab.js',
-      'captain-metrics-dashboard.js'
-    ];
-    
-    scriptsToInject.forEach(scriptName => {
+
+    // Sequential injection — each script fully loads before the next starts,
+    // eliminating the race condition that caused tabs to be missing on first load.
+    const injectScript = (scriptName) => new Promise((resolve) => {
       const script = document.createElement('script');
       script.src = chrome.runtime.getURL(scriptName);
-      script.onload = () => console.log(`[Captain Timer] ✅ Injected ${scriptName}`);
+      script.onload = () => { console.log(`[Captain Timer] ✅ Injected ${scriptName}`); resolve(); };
+      script.onerror = () => { console.error(`[Captain Timer] ❌ Failed: ${scriptName}`); resolve(); };
       (document.head || document.documentElement).appendChild(script);
     });
-    
-    // Wait for scripts to load, then fetch processes and send init message
-    setTimeout(async () => {
-      // Fetch processes from background
-      chrome.runtime.sendMessage({ type: 'GET_ALL_PROCESSES' }, (response) => {
-        const processes = response?.processes || [];
-        console.log(`[Captain Timer] Fetched ${processes.length} processes from background`);
-        
-        // Send init message with processes
-        window.postMessage({
-          type: 'INIT_CAPTAIN_TIMER',
-          email: currentUser.email,
-          processes: processes
-        }, '*');
-        
-        console.log('[Captain Timer] ✅ Init message sent with processes');
-      });
-    }, 1000);
+
+    for (const scriptName of ['captain-timer-system.js', 'captain-pause-modal.js', 'process-timer-tab.js', 'captain-metrics-dashboard.js']) {
+      await injectScript(scriptName);
+    }
+
+    // All scripts loaded — fetch processes + sequence, then send init
+    chrome.runtime.sendMessage({ type: 'GET_ALL_PROCESSES' }, async (response) => {
+      const processes = response?.processes || [];
+      console.log(`[Captain Timer] Fetched ${processes.length} processes from background`);
+
+      // Load sequence from chrome.storage.local (persistent across page reloads)
+      const seqKey = `captain_sequence_${currentUser.email}`;
+      const seqResult = await new Promise(r => chrome.storage.local.get([seqKey], r));
+      const savedSequence = seqResult[seqKey] || {};
+
+      window.postMessage({
+        type: 'INIT_CAPTAIN_TIMER',
+        email: currentUser.email,
+        processes: processes,
+        sequence: savedSequence,
+        groqApiKey: typeof CHATBOT_CONFIG !== 'undefined' ? CHATBOT_CONFIG.api_key : '',
+        systemPrompt: typeof CHATBOT_CONFIG !== 'undefined' ? CHATBOT_CONFIG.system_prompt : ''
+      }, '*');
+
+      console.log('[Captain Timer] ✅ Init message sent with', Object.keys(savedSequence).length, 'saved sequences');
+    });
   }
 }
+
+// ─── Bridge: page-context → chrome.storage.local ───
+window.addEventListener('message', async (event) => {
+  if (!event.data?.type) return;
+
+  if (event.data.type === 'CAPTAIN_SAVE_SEQUENCE') {
+    const key = `captain_sequence_${event.data.email}`;
+    chrome.storage.local.set({ [key]: event.data.data });
+    console.log('[Sequence Bridge] Saved sequence for', event.data.email, '—', Object.keys(event.data.data).length, 'processes');
+  }
+
+  if (event.data.type === 'CAPTAIN_VIDEO_COMPLETE') {
+    const { email, processName, xpAwarded } = event.data;
+    const key = `captain_completed_videos_${email}`;
+    const result = await new Promise(r => chrome.storage.local.get([key], r));
+    const completed = result[key] || {};
+    if (!completed[processName]) {
+      completed[processName] = { completedAt: Date.now(), xpAwarded };
+      chrome.storage.local.set({ [key]: completed });
+      // Sync to Supabase
+      if (typeof supabaseSync !== 'undefined') {
+        supabaseSync.upsert('agent_profiles', {
+          email,
+          videos_watched: Object.keys(completed).length,
+          last_active: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, 'email');
+        supabaseSync.insert('gamification_events', {
+          email,
+          event_type: 'xp_earned',
+          xp_amount: xpAwarded,
+          reason: `Marked complete: ${processName}`,
+          process_name: processName,
+          created_at: new Date().toISOString()
+        });
+      }
+      console.log('[Video Complete] Marked:', processName, '+', xpAwarded, 'XP');
+    }
+  }
+});
 
 // ─── Inject appropriate overlay ───
 function injectOverlay() {
@@ -168,6 +216,7 @@ function injectOverlay() {
   const { role } = currentUser;
   
   if (role === 'Captain' && currentPlatform === 'log10') {
+    window.__captainEmail = currentUser.email;
     overlayInstance = new ProcessPulseOverlay();
     overlayInstance.inject();
   } else if (role === 'L1 Agent' && currentPlatform === 'kapture') {
@@ -284,24 +333,44 @@ class ProcessPulseOverlay {
     document.getElementById('valmo-close')?.addEventListener('click', () => this.closePanel());
     
     document.getElementById('valmo-process-list')?.addEventListener('click', (e) => {
-      const btn = e.target.closest('.valmo-video-btn');
-      if (!btn) return;
-      
-      const link = btn.dataset.videoLink;
-      
-      if (!link || link === 'demo://placeholder_video') {
-        btn.textContent = 'Coming soon...';
-        setTimeout(() => { btn.textContent = 'Watch Video'; }, 2000);
-        return;
+      // Watch Video
+      const videoBtn = e.target.closest('.valmo-video-btn');
+      if (videoBtn) {
+        const link = videoBtn.dataset.videoLink;
+        if (!link || link === 'demo://placeholder_video') {
+          videoBtn.textContent = 'Coming soon...';
+          setTimeout(() => { videoBtn.textContent = '🎥 Watch'; }, 2000);
+          return;
+        }
+        if (!link.startsWith('http') && !link.startsWith('demo://')) {
+          window.open(chrome.runtime.getURL('data/' + link), '_blank');
+          return;
+        }
+        window.open(link, '_blank', 'noopener,noreferrer');
       }
-      
-      if (!link.startsWith('http') && !link.startsWith('demo://')) {
-        const videoUrl = chrome.runtime.getURL('data/' + link);
-        window.open(videoUrl, '_blank');
-        return;
+
+      // Mark Complete
+      const completeBtn = e.target.closest('.valmo-complete-btn');
+      if (completeBtn && !completeBtn.disabled) {
+        const processName = completeBtn.dataset.process;
+        const XP_PER_VIDEO = 30;
+        // Award XP via gamification system
+        if (window.gamificationSystem?.awardXP) {
+          window.gamificationSystem.awardXP(XP_PER_VIDEO, `Watched: ${processName}`, processName);
+        }
+        // Bridge to content script for chrome.storage + Supabase
+        window.postMessage({
+          type: 'CAPTAIN_VIDEO_COMPLETE',
+          email: currentUser?.email,
+          processName,
+          xpAwarded: XP_PER_VIDEO
+        }, '*');
+        // Immediate UI update
+        completeBtn.textContent = '✅ Done';
+        completeBtn.classList.add('done');
+        completeBtn.disabled = true;
+        completeBtn.closest('.valmo-process-card')?.classList.add('valmo-card-done');
       }
-      
-      window.open(link, '_blank', 'noopener,noreferrer');
     });
   }
   
@@ -365,17 +434,27 @@ class ProcessPulseOverlay {
       return;
     }
     
-    list.innerHTML = matches.map(proc => `
-      <div class="valmo-process-card">
-        <div class="valmo-process-name">${this.escape(proc.process_name)}</div>
-        <div class="valmo-process-meta">
-          📂 ${this.escape(proc.start_tab)}
-        </div>
-        <button class="valmo-video-btn" data-video-link="${this.escape(proc.video_link || '')}">
-          🎥 Watch Video
-        </button>
-      </div>
-    `).join('');
+    // Load completed videos from chrome.storage.local
+    const completedKey = `captain_completed_videos_${currentUser?.email || ''}`;
+    chrome.storage.local.get([completedKey], (result) => {
+      const completed = result[completedKey] || {};
+
+      list.innerHTML = matches.map(proc => {
+        const isDone = !!completed[proc.process_name];
+        return `
+          <div class="valmo-process-card ${isDone ? 'valmo-card-done' : ''}">
+            <div class="valmo-process-name">${this.escape(proc.process_name)}</div>
+            <div class="valmo-process-meta">📂 ${this.escape(proc.start_tab)}</div>
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+              <button class="valmo-video-btn" data-video-link="${this.escape(proc.video_link || '')}">🎥 Watch</button>
+              <button class="valmo-complete-btn ${isDone ? 'done' : ''}" data-process="${this.escape(proc.process_name)}" ${isDone ? 'disabled' : ''}>
+                ${isDone ? '✅ Done' : '✓ Complete'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    });
   }
   
   togglePanel() {
@@ -467,97 +546,83 @@ class L1ChatbotOverlayEnhanced {
     this.renderTemplateView();
   }
   
-  renderDashboard() {
+  async renderDashboard() {
     const container = document.getElementById('sop-view-container');
     if (!container) return;
-    
-    const categoryCounts = {};
-    Object.entries(this.sopData).forEach(([category, sops]) => {
-      categoryCounts[category] = sops.length;
-    });
-    
-    const commonIssues = [
-      { emoji: '📦', text: 'Shortage loss marked', query: 'shortage loss attribution pending' },
-      { emoji: '💰', text: 'Payment not received', query: 'payment not received status' },
-      { emoji: '📊', text: 'Low load volume', query: 'low load from previous weeks' },
-      { emoji: '💵', text: 'COD not reflecting', query: 'deposited money not reflecting' }
-    ];
-    
+
+    // Extract first name from email (e.g. "priya_technotask@meesho.com" → "Priya")
+    const emailPrefix = (currentUser?.email || '').split('_')[0];
+    const agentName = emailPrefix
+      ? emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
+      : 'there';
+
+    // Personalise greeting from past query history
+    const commonQueries = await this.getCommonQueries();
+    let personalizedNote;
+    if (commonQueries.length > 0) {
+      const topics = commonQueries.slice(0, 2).map(q => `<strong>${this.escape(q)}</strong>`).join(' and ');
+      personalizedNote = `I've noticed you often ask about ${topics} — feel free to ask me anytime!`;
+    } else {
+      personalizedNote = 'Ask me anything about SOPs, escalation steps, or processes — I\'m here to help!';
+    }
+
     container.innerHTML = `
-      <div class="valmo-dashboard">
-        <div class="valmo-greeting">
-          <div class="greeting-icon">👋</div>
-          <h2>Hi! How can I help?</h2>
-          <p>Get instant answers from SOPs</p>
-        </div>
-        
-        <div class="valmo-quick-actions">
-          <div class="section-title">🔥 QUICK ACTIONS</div>
-          <div class="category-grid">
-            ${this.renderCategoryButtons(categoryCounts)}
+      <div class="valmo-chatbot-home">
+        <div class="chatbot-messages" id="chatbot-messages">
+          <div class="message bot-message">
+            <div class="message-avatar">✨</div>
+            <div class="message-content bot-welcome">
+              <p>Hi <strong>${this.escape(agentName)}</strong>! I'm <strong>Jarvis</strong>, your SOP assistant.</p>
+              <p>${personalizedNote}</p>
+            </div>
           </div>
         </div>
-        
-        <div class="valmo-common-issues">
-          <div class="section-title">📋 COMMON ISSUES</div>
-          <div class="issue-list">
-            ${commonIssues.map(issue => `
-              <button class="issue-btn" data-query="${this.escape(issue.query)}">
-                <span class="issue-emoji">${issue.emoji}</span>
-                <span class="issue-text">${issue.text}</span>
-                <span class="issue-arrow">→</span>
-              </button>
-            `).join('')}
+
+        <div class="chatbot-chips-area">
+          <div class="chips-scroll">
+            ${this.renderCategoryChips()}
+            ${this.renderCommonChips()}
           </div>
         </div>
-        
-        <div class="valmo-search-box">
-          <div class="search-icon">🔍</div>
-          <input 
-            type="text" 
-            id="sop-search" 
-            placeholder="Or search for anything..." 
+
+        <div class="chatbot-input-bar">
+          <input
+            type="text"
+            id="chatbot-input"
+            placeholder="Ask about SOPs, processes, escalations..."
             autocomplete="off"
           />
-          <button id="sop-search-btn" class="search-btn">Ask</button>
+          <button id="chatbot-send-btn" class="chatbot-send-btn">Send</button>
         </div>
       </div>
     `;
-    
-    container.querySelectorAll('.category-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const category = e.currentTarget.dataset.category;
-        this.showCategorySOPs(category);
-      });
-    });
-    
-    container.querySelectorAll('.issue-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+
+    const input = container.querySelector('#chatbot-input');
+    const sendBtn = container.querySelector('#chatbot-send-btn');
+
+    const handleSend = () => {
+      const q = input.value.trim();
+      if (!q) return;
+      input.value = '';
+      analytics.log('search_submitted', { query: q });
+      this.handleChatMessage(q);
+    };
+
+    sendBtn.addEventListener('click', handleSend);
+    input.addEventListener('keypress', e => { if (e.key === 'Enter') handleSend(); });
+
+    container.querySelectorAll('.chip-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const type = e.currentTarget.dataset.type;
         const query = e.currentTarget.dataset.query;
-        analytics.log('quick_action_clicked', { query });
-        this.handleSearch(query, true);
-      });
-    });
-    
-    const searchInput = container.querySelector('#sop-search');
-    const searchBtn = container.querySelector('#sop-search-btn');
-    
-    searchBtn?.addEventListener('click', () => {
-      const query = searchInput.value.trim();
-      if (query) {
-        analytics.log('search_submitted', { query, method: 'button' });
-        this.handleSearch(query, true);
-      }
-    });
-    
-    searchInput?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        const query = searchInput.value.trim();
-        if (query) {
-          analytics.log('search_submitted', { query, method: 'enter' });
-          this.handleSearch(query, true);
+        if (type === 'category') {
+          analytics.log('category_chip_clicked', { category: e.currentTarget.dataset.category });
+          this.showCategorySOPs(e.currentTarget.dataset.category);
+        } else {
+          analytics.log('chip_clicked', { query });
+          this.handleChatMessage(query);
         }
-      }
+      });
     });
   }
   
@@ -586,31 +651,21 @@ class L1ChatbotOverlayEnhanced {
   showCategorySOPs(category) {
     const sops = this.sopData[category] || [];
     analytics.log('category_clicked', { category, sopCount: sops.length });
-    
-    const container = document.getElementById('sop-view-container');
-    if (!container) return;
-    
-    container.innerHTML = `
-      <div class="valmo-category-view">
-        <div class="category-header">
-          <button class="back-btn" id="back-to-dashboard">← Back</button>
-          <h3>${category}</h3>
-          <span class="sop-count">${sops.length} SOPs</span>
-        </div>
-        
-        <div class="sop-list">
-          ${sops.map((sop, idx) => this.renderSOPCard(sop, category, idx)).join('')}
-        </div>
-      </div>
-    `;
-    
-    container.querySelector('#back-to-dashboard')?.addEventListener('click', () => {
-      this.renderDashboard();
-    });
-    
-    container.querySelectorAll('.copy-process-btn').forEach(btn => {
+
+    this.addUserMessage(`Show me ${category} SOPs`);
+
+    const html = sops.length === 0
+      ? `<p style="color:#7f8c8d">No SOPs found for <strong>${this.escape(category)}</strong>.</p>`
+      : `<div class="keyword-results">
+           <div class="results-header">${this.escape(category)} — ${sops.length} SOP${sops.length > 1 ? 's' : ''}</div>
+           <div class="sop-list">${sops.map((sop, idx) => this.renderSOPCard(sop, category, idx)).join('')}</div>
+         </div>`;
+
+    const botEl = this.addBotMessage(html);
+
+    botEl.querySelectorAll('.copy-process-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const sopIdx = e.target.dataset.sopIdx;
+        const sopIdx = parseInt(e.target.dataset.sopIdx);
         const process = sops[sopIdx]?.process || '';
         this.copyToClipboard(process, e.target);
         analytics.log('process_copied', { category, sopIdx });
@@ -1162,16 +1217,138 @@ class L1ChatbotOverlayEnhanced {
       const data = await sheetsSync.loadData();
       this.sopData = data.sops;
       this.templateData = data.templates;
-      
+
       if (CHATBOT_CONFIG.use_claude_api) {
-        this.smartChatbot = new SmartChatbot(this.sopData);
+        const agentName = (currentUser?.email || '').split('_')[0];
+        const commonQueries = await this.getCommonQueries();
+        this.smartChatbot = new SmartChatbot(this.sopData, agentName, commonQueries);
       }
-      
+
     } catch (e) {
       console.error('[Valmo Ops] Failed to load data:', e);
       this.sopData = {};
       this.templateData = {};
     }
+  }
+
+  // ── Chat helper methods ──────────────────────────────────────
+
+  async handleChatMessage(query) {
+    if (!query.trim()) return;
+
+    this.addUserMessage(query);
+    const loadingEl = this.addLoadingMessage();
+
+    let result;
+    if (CHATBOT_CONFIG.use_claude_api && this.smartChatbot) {
+      result = await this.smartChatbot.ask(query);
+    } else {
+      result = { success: false };
+    }
+
+    loadingEl.remove();
+
+    if (result.success) {
+      this.addBotMessage(this.formatSmartAnswer(result.answer));
+    } else {
+      const matches = this.getKeywordMatches(query);
+      if (matches.length === 0) {
+        this.addBotMessage(`<div class="no-results"><div class="no-results-icon">🔍</div><p>No SOPs found for "<strong>${this.escape(query)}</strong>"</p><p class="suggestion">Try different keywords or tap a category chip above.</p></div>`);
+      } else {
+        this.addBotMessage(`<div class="keyword-results"><div class="results-header">Found ${matches.length} matching SOP${matches.length > 1 ? 's' : ''}</div>${matches.slice(0, 3).map(sop => this.renderSOPCard(sop, sop.category, sop.idx)).join('')}</div>`);
+      }
+    }
+
+    analytics.log('question_asked', { query });
+  }
+
+  addUserMessage(text) {
+    const el = document.createElement('div');
+    el.className = 'message user-message';
+    el.innerHTML = `<div class="message-avatar">👤</div><div class="message-content">${this.escape(text)}</div>`;
+    document.getElementById('chatbot-messages')?.appendChild(el);
+    this.scrollChatToBottom();
+    return el;
+  }
+
+  addBotMessage(html) {
+    const el = document.createElement('div');
+    el.className = 'message bot-message';
+    el.innerHTML = `<div class="message-avatar">✨</div><div class="message-content">${html}</div>`;
+    document.getElementById('chatbot-messages')?.appendChild(el);
+    this.scrollChatToBottom();
+    return el;
+  }
+
+  addLoadingMessage() {
+    const el = document.createElement('div');
+    el.className = 'message bot-message';
+    el.innerHTML = `<div class="message-avatar">✨</div><div class="message-content"><div class="loading-dots"><span></span><span></span><span></span></div></div>`;
+    document.getElementById('chatbot-messages')?.appendChild(el);
+    this.scrollChatToBottom();
+    return el;
+  }
+
+  scrollChatToBottom() {
+    const chat = document.getElementById('chatbot-messages');
+    if (chat) chat.scrollTop = chat.scrollHeight;
+  }
+
+  async getCommonQueries() {
+    try {
+      const result = await chrome.storage.local.get(['analytics']);
+      const logs = result.analytics || [];
+      const counts = {};
+      logs
+        .filter(e => e.user === currentUser?.email && e.event === 'question_asked')
+        .forEach(e => {
+          const q = e.data?.query;
+          if (q) counts[q] = (counts[q] || 0) + 1;
+        });
+      return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2)
+        .map(([q]) => q);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  getKeywordMatches(query) {
+    const matches = [];
+    const lower = query.toLowerCase();
+    Object.entries(this.sopData).forEach(([category, sops]) => {
+      sops.forEach((sop, idx) => {
+        const score = sop.keywords?.filter(kw => lower.includes(kw) || kw.includes(lower)).length || 0;
+        if (score > 0 || sop.scenario.toLowerCase().includes(lower)) {
+          matches.push({ ...sop, category, score, idx });
+        }
+      });
+    });
+    return matches.sort((a, b) => b.score - a.score);
+  }
+
+  renderCategoryChips() {
+    return [
+      { name: 'Losses & Debits', icon: '📦' },
+      { name: 'Payments', icon: '💰' },
+      { name: 'Orders & Planning', icon: '📊' },
+      { name: 'Cash Handover', icon: '💵' }
+    ].map(cat => `
+      <button class="chip-btn" data-type="category" data-category="${this.escape(cat.name)}" data-query="Show ${this.escape(cat.name)} SOPs">
+        ${cat.icon} ${cat.name}
+      </button>
+    `).join('');
+  }
+
+  renderCommonChips() {
+    return [
+      { text: 'Shortage loss', query: 'shortage loss attribution pending' },
+      { text: 'COD not reflecting', query: 'deposited money not reflecting' },
+      { text: 'Payment pending', query: 'payment not received status' }
+    ].map(issue => `
+      <button class="chip-btn" data-query="${this.escape(issue.query)}">${issue.text}</button>
+    `).join('');
   }
   
   attachListeners() {

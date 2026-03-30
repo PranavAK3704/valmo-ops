@@ -1,13 +1,20 @@
 // popup.js - Unified login handler
 
 const emailInput = document.getElementById('emailInput');
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const loginForm = document.getElementById('loginForm');
+const hubSelect   = document.getElementById('hubSelect');
+const loginBtn    = document.getElementById('loginBtn');
+const logoutBtn   = document.getElementById('logoutBtn');
+const loginForm   = document.getElementById('loginForm');
 const loggedInView = document.getElementById('loggedInView');
-const status = document.getElementById('status');
+const status    = document.getElementById('status');
 const userEmail = document.getElementById('userEmail');
-const userRole = document.getElementById('userRole');
+const userRole  = document.getElementById('userRole');
+
+// Show hub selector only for captains
+emailInput.addEventListener('input', () => {
+  const role = detectRole(emailInput.value);
+  hubSelect.style.display = role === 'Captain' ? 'block' : 'none';
+});
 
 // Role detection based on email pattern
 function detectRole(email) {
@@ -28,9 +35,9 @@ function detectRole(email) {
 }
 
 // Check login state on popup open
-chrome.storage.local.get(['userEmail', 'userRole'], (result) => {
+chrome.storage.local.get(['userEmail', 'userRole', 'userHub'], (result) => {
   if (result.userEmail) {
-    showLoggedIn(result.userEmail, result.userRole);
+    showLoggedIn(result.userEmail, result.userRole, result.userHub);
   }
 });
 
@@ -49,9 +56,17 @@ loginBtn.addEventListener('click', () => {
   }
   
   const role = detectRole(email);
-  
-  chrome.storage.local.set({ userEmail: email, userRole: role }, () => {
-    showLoggedIn(email, role);
+  const hub  = role === 'Captain' ? (hubSelect.value || 'Unknown') : null;
+
+  if (role === 'Captain' && !hubSelect.value) {
+    status.textContent = 'Please select your hub';
+    status.style.background = 'rgba(244, 67, 54, 0.4)';
+    setTimeout(() => { status.textContent = 'Not logged in'; status.style.background = 'rgba(255,255,255,0.1)'; }, 2000);
+    return;
+  }
+
+  chrome.storage.local.set({ userEmail: email, userRole: role, userHub: hub }, () => {
+    showLoggedIn(email, role, hub);
     
     // Notify all tabs
     chrome.tabs.query({}, (tabs) => {
@@ -59,7 +74,8 @@ loginBtn.addEventListener('click', () => {
         chrome.tabs.sendMessage(tab.id, {
           type: 'USER_LOGGED_IN',
           email: email,
-          role: role
+          role: role,
+          hub: hub
         }).catch(() => {});
       });
     });
@@ -82,13 +98,13 @@ logoutBtn.addEventListener('click', () => {
 });
 
 // UI helpers
-function showLoggedIn(email, role) {
+function showLoggedIn(email, role, hub) {
   loginForm.style.display = 'none';
   loggedInView.style.display = 'block';
   status.textContent = '✓ Logged in';
   status.classList.add('logged-in');
   userEmail.textContent = email;
-  userRole.textContent = role;
+  userRole.textContent = hub ? `${role} · ${hub}` : role;
 }
 
 function showLoggedOut() {

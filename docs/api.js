@@ -1,311 +1,252 @@
 /**
- * api.js - Google Sheets API Integration
- * 
- * Handles all data fetching from Google Sheets:
- * - Training processes (Training_Videos)
- * - Assessment questions (Assessment_Questions)
- * - User progress (User_Progress)
- * - Leaderboard data (Leaderboard)
+ * api.js — Supabase-backed data layer for the Valmo Training Hub
+ *
+ * Replaces the old Google Sheets placeholder URLs.
+ * All data flows through Supabase REST API using the anon key.
  */
 
+const SUPABASE_URL = 'https://wfnmltorfvaokqbzggkn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_kVRokdcfNT-egywk-KbQ3g_mEs5QVGW';
+
+// ── Supabase REST helper ─────────────────────────────────────────────────────
+
+async function sb(table, params = '') {
+  const url = `${SUPABASE_URL}/rest/v1/${table}${params}`;
+  const res  = await fetch(url, {
+    headers: {
+      'apikey':        SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Accept':        'application/json'
+    }
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`[API] ${table}: ${res.status} ${err}`);
+  }
+  return res.json();
+}
+
+async function sbUpsert(table, data, onConflict) {
+  const url = `${SUPABASE_URL}/rest/v1/${table}${onConflict ? `?on_conflict=${encodeURIComponent(onConflict)}` : ''}`;
+  await fetch(url, {
+    method:  'POST',
+    headers: {
+      'apikey':        SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type':  'application/json',
+      'Prefer':        'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify(data)
+  });
+}
+
+async function sbInsert(table, data) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method:  'POST',
+    headers: {
+      'apikey':        SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type':  'application/json',
+      'Prefer':        'return=minimal'
+    },
+    body: JSON.stringify(data)
+  });
+}
+
+// ── API Object ───────────────────────────────────────────────────────────────
+
 const API = {
-  // Google Sheets published CSV URLs
-  // Replace these with your actual published URLs
-  SHEETS: {
-    TRAINING_VIDEOS: 'YOUR_TRAINING_VIDEOS_CSV_URL',  // TODO: Replace
-    ASSESSMENT_QUESTIONS: 'YOUR_ASSESSMENT_QUESTIONS_CSV_URL',  // TODO: Replace
-    LEADERBOARD: 'YOUR_LEADERBOARD_CSV_URL',  // TODO: Replace
-    USER_PROGRESS: 'YOUR_USER_PROGRESS_CSV_URL'  // TODO: Replace (optional)
-  },
-
-  // Cache to avoid repeated fetches
-  cache: {
-    processes: null,
-    questions: null,
-    leaderboard: null,
-    lastFetch: {}
-  },
 
   /**
-   * Fetch and parse CSV from Google Sheets
+   * Get all simulations as training processes.
+   * Returns array matching the shape that dashboard.js expects.
    */
-  async fetchCSV(url) {
+  async getProcesses() {
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
-      const text = await response.text();
-      return this.parseCSV(text);
-    } catch (error) {
-      console.error('[API] Fetch error:', error);
-      return null;
+      const rows = await sb('simulations', '?select=id,title,process_name,hub,step_count&order=created_at.desc');
+      return rows.map(r => ({
+        id:           r.id,
+        Process_Name: r.process_name || r.title,
+        Priority:     'MUST_KNOW',   // all captain processes are must-know
+        Status:       'NEW',
+        Video_Link:   null,          // sims are played in the extension, no external video
+        Sim_ID:       r.id,
+        Hub:          r.hub,
+        Step_Count:   r.step_count
+      }));
+    } catch (e) {
+      console.error('[API] getProcesses failed:', e);
+      return [];
     }
   },
 
   /**
-   * Parse CSV text to array of objects
+   * Get user progress from Supabase (agent_profiles + gamification_events).
+   * Returns object matching the shape that dashboard.js expects.
    */
-  parseCSV(text) {
-    const lines = text.trim().split('\n');
-    if (lines.length < 2) return [];
+  async getUserProgress(email) {
+    if (!email) return this._emptyProgress();
 
-    const headers = lines[0].split(',').map(h => h.trim());
-    const rows = [];
+    try {
+      const [profile, events, simCompletions] = await Promise.all([
+        sb('agent_profiles', `?email=eq.${encodeURIComponent(email)}&select=*`).then(r => r[0] || null),
+        sb('gamification_events', `?email=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=50`),
+        sb('sim_completions',     `?email=eq.${encodeURIComponent(email)}&select=sim_id,score,completed_at`)
+      ]);
 
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
-      const row = {};
-      
-      headers.forEach((header, idx) => {
-        row[header] = values[idx] || '';
+      const g    = profile || {};
+      const xp   = g.total_xp    || 0;
+      const level= g.level        || 1;
+
+      // History from gamification_events
+      const history = events
+        .filter(e => e.xp_amount > 0)
+        .slice(0, 15)
+        .map(e => ({
+          type:      e.event_type === 'level_up' ? 'xp' : e.event_type === 'achievement_unlocked' ? 'achievement' : 'xp',
+          reason:    e.reason || e.event_type,
+          amount:    e.xp_amount,
+          timestamp: new Date(e.created_at).getTime()
+        }));
+
+      // Videos watched: events with reason starting "Watched:" or "Marked complete:"
+      const videosWatched = events
+        .filter(e => e.reason && (e.reason.startsWith('Watched:') || e.reason.startsWith('Marked complete:')))
+        .map(e => e.process_name || e.reason.replace(/^(Watched:|Marked complete:)\s*/, '').trim());
+
+      // Assessments passed: sim_completions with score >= 70
+      const assessmentsPassed = simCompletions
+        .filter(c => (c.score || 0) >= 70)
+        .map(c => c.sim_id);
+
+      // Achievements
+      const achievements = events
+        .filter(e => e.event_type === 'achievement_unlocked' && e.achievement_id)
+        .map(e => ({ id: e.achievement_id, timestamp: new Date(e.created_at).getTime() }));
+
+      return {
+        totalXP:           xp,
+        level:             level,
+        stats: {
+          totalVideos:      g.videos_watched      || videosWatched.length,
+          totalAssessments: g.assessments_passed  || assessmentsPassed.length,
+          averageScore:     g.avg_score           || 0
+        },
+        streak: {
+          current: g.streak_current || 0,
+          longest: g.streak_longest || 0
+        },
+        history,
+        videosWatched:     [...new Set(videosWatched)],
+        assessmentsPassed: [...new Set(assessmentsPassed)],
+        achievements,
+        assessmentScores:  simCompletions.reduce((acc, c) => { acc[c.sim_id] = c.score || 0; return acc; }, {})
+      };
+    } catch (e) {
+      console.error('[API] getUserProgress failed:', e);
+      return this._emptyProgress();
+    }
+  },
+
+  /**
+   * Save/sync user progress back to Supabase.
+   */
+  async saveUserProgress(email, progress) {
+    if (!email) return;
+    try {
+      await sbUpsert('agent_profiles', {
+        email,
+        total_xp:           progress.totalXP,
+        level:              progress.level,
+        videos_watched:     progress.stats?.totalVideos      || 0,
+        assessments_passed: progress.stats?.totalAssessments || 0,
+        avg_score:          progress.stats?.averageScore     || 0,
+        streak_current:     progress.streak?.current        || 0,
+        streak_longest:     progress.streak?.longest        || 0,
+        last_active:        new Date().toISOString(),
+        updated_at:         new Date().toISOString()
+      }, 'email');
+    } catch (e) {
+      console.error('[API] saveUserProgress failed:', e);
+    }
+  },
+
+  /**
+   * Award XP and write a gamification_event row.
+   */
+  async awardXP(email, amount, reason, processName) {
+    if (!email || !amount) return;
+    try {
+      await sbInsert('gamification_events', {
+        email,
+        event_type:   'xp_earned',
+        xp_amount:    amount,
+        reason,
+        process_name: processName || null,
+        created_at:   new Date().toISOString()
       });
-      
-      rows.push(row);
+    } catch (e) {
+      console.error('[API] awardXP failed:', e);
     }
-
-    return rows;
   },
 
   /**
-   * Get all training processes
+   * Get leaderboard (all captains ordered by XP).
    */
-  async getProcesses(forceRefresh = false) {
-    // Use cache if available and not forcing refresh
-    if (!forceRefresh && this.cache.processes) {
-      return this.cache.processes;
+  async getLeaderboard() {
+    try {
+      const rows = await sb('agent_profiles', '?role=eq.Captain&order=total_xp.desc&limit=100&select=email,level,total_xp,streak_current,videos_watched,assessments_passed');
+      return rows.map(r => ({
+        email:             r.email,
+        name:              r.email.split('@')[0],
+        level:             r.level             || 1,
+        totalXP:           r.total_xp          || 0,
+        videosCompleted:   r.videos_watched    || 0,
+        assessmentsPassed: r.assessments_passed|| 0,
+        streak:            r.streak_current    || 0
+      }));
+    } catch (e) {
+      console.error('[API] getLeaderboard failed:', e);
+      return [];
     }
-
-    console.log('[API] Fetching training processes...');
-    
-    // For demo/testing: return mock data if URL not configured
-    if (this.SHEETS.TRAINING_VIDEOS === 'YOUR_TRAINING_VIDEOS_CSV_URL') {
-      console.warn('[API] Using mock data - configure TRAINING_VIDEOS URL');
-      return this.getMockProcesses();
-    }
-
-    const data = await this.fetchCSV(this.SHEETS.TRAINING_VIDEOS);
-    
-    if (!data) {
-      console.warn('[API] Failed to fetch, using mock data');
-      return this.getMockProcesses();
-    }
-
-    this.cache.processes = data;
-    return data;
   },
 
   /**
-   * Get assessment questions for a process
+   * Get sims assigned to this captain (direct or via hub).
+   * Queries the captain_pending_sims view which already expands hub assignments.
    */
-  async getAssessmentQuestions(processName) {
-    console.log('[API] Fetching assessment questions for:', processName);
-
-    // For demo: return mock questions if URL not configured
-    if (this.SHEETS.ASSESSMENT_QUESTIONS === 'YOUR_ASSESSMENT_QUESTIONS_CSV_URL') {
-      console.warn('[API] Using mock questions - configure ASSESSMENT_QUESTIONS URL');
-      return this.getMockQuestions(processName);
+  async getAssignedSims(email) {
+    if (!email) return [];
+    try {
+      const rows = await sb(
+        'captain_pending_sims',
+        `?email=eq.${encodeURIComponent(email)}&select=sim_id,sim_title,process_name,is_mandatory,due_date,completed_at&order=is_mandatory.desc,due_date.asc`
+      );
+      return rows.map(r => ({
+        sim_id:       r.sim_id,
+        title:        r.sim_title,
+        process_name: r.process_name,
+        is_mandatory: r.is_mandatory,
+        due_date:     r.due_date,
+        completed_at: r.completed_at
+      }));
+    } catch (e) {
+      console.error('[API] getAssignedSims failed:', e);
+      return [];
     }
-
-    const allQuestions = await this.fetchCSV(this.SHEETS.ASSESSMENT_QUESTIONS);
-    
-    if (!allQuestions) {
-      return this.getMockQuestions(processName);
-    }
-
-    // Filter questions for this process
-    return allQuestions.filter(q => q.process_name === processName);
   },
 
-  /**
-   * Get leaderboard data
-   */
-  async getLeaderboard(forceRefresh = false) {
-    if (!forceRefresh && this.cache.leaderboard) {
-      return this.cache.leaderboard;
-    }
+  // ── Internal ────────────────────────────────────────────────────────────────
 
-    console.log('[API] Fetching leaderboard...');
-
-    // For demo: return mock leaderboard if URL not configured
-    if (this.SHEETS.LEADERBOARD === 'YOUR_LEADERBOARD_CSV_URL') {
-      console.warn('[API] Using mock leaderboard - configure LEADERBOARD URL');
-      return this.getMockLeaderboard();
-    }
-
-    const data = await this.fetchCSV(this.SHEETS.LEADERBOARD);
-    
-    if (!data) {
-      return this.getMockLeaderboard();
-    }
-
-    this.cache.leaderboard = data;
-    return data;
-  },
-
-  /**
-   * Save user progress to Google Sheets
-   * Note: This requires a backend API or Google Sheets API
-   * For now, we'll use localStorage
-   */
-  async saveUserProgress(userEmail, progressData) {
-    console.log('[API] Saving progress for:', userEmail);
-    
-    // Store in localStorage for now
-    const key = `user_progress_${userEmail}`;
-    localStorage.setItem(key, JSON.stringify(progressData));
-    
-    // TODO: Implement actual Google Sheets write via API
-    // This would require a backend endpoint or Apps Script
-    
-    return true;
-  },
-
-  /**
-   * Load user progress from storage
-   */
-  async getUserProgress(userEmail) {
-    console.log('[API] Loading progress for:', userEmail);
-    
-    const key = `user_progress_${userEmail}`;
-    const data = localStorage.getItem(key);
-    
-    if (data) {
-      return JSON.parse(data);
-    }
-    
-    // Return default progress structure
+  _emptyProgress() {
     return {
-      email: userEmail,
-      totalXP: 0,
-      level: 1,
-      videosWatched: [],
-      assessmentsPassed: [],
-      assessmentScores: {},
-      achievements: [],
-      streak: { current: 0, longest: 0, lastActive: null },
-      stats: {
-        totalVideos: 0,
-        totalAssessments: 0,
-        averageScore: 0
-      },
-      history: []
+      totalXP: 0, level: 1,
+      stats: { totalVideos: 0, totalAssessments: 0, averageScore: 0 },
+      streak: { current: 0, longest: 0 },
+      history: [], videosWatched: [], assessmentsPassed: [],
+      achievements: [], assessmentScores: {}
     };
-  },
-
-  // ═══════════════════════════════════════════════════════════════
-  // MOCK DATA (for testing without Google Sheets configured)
-  // ═══════════════════════════════════════════════════════════════
-
-  getMockProcesses() {
-    return [
-      {
-        Process_Name: 'RTO Bagging',
-        URL_Module: 'rto',
-        Start_Tab: 'RTO',
-        Video_Link: 'https://www.youtube.com/watch?v=demo1',
-        Platform: 'Log10',
-        Priority: 'MUST_KNOW',
-        Status: 'NEW',
-        Date_Added: '2026-03-01',
-        Date_Updated: '2026-03-01',
-        Version: '1.0',
-        Completion_Required: 'TRUE'
-      },
-      {
-        Process_Name: 'Misroute Bagging',
-        URL_Module: 'inventory',
-        Start_Tab: 'Inventory',
-        Video_Link: 'https://www.youtube.com/watch?v=demo2',
-        Platform: 'Log10',
-        Priority: 'GOOD_TO_KNOW',
-        Status: 'UPDATED',
-        Date_Added: '2026-02-15',
-        Date_Updated: '2026-03-02',
-        Version: '1.2',
-        Completion_Required: 'FALSE'
-      }
-    ];
-  },
-
-  getMockQuestions(processName) {
-    const questionBank = {
-      'RTO Bagging': [
-        {
-          process_name: 'RTO Bagging',
-          version: '1.0',
-          question_id: 'rto_q1',
-          type: 'mcq',
-          question: 'What is the first step in RTO Bagging?',
-          option_a: 'Create Manifest',
-          option_b: 'Scan Shipments',
-          option_c: 'Navigate to RTO Tab',
-          option_d: 'Lock Manifest',
-          correct_index: '2',
-          model_answer: '',
-          points: '20'
-        },
-        {
-          process_name: 'RTO Bagging',
-          version: '1.0',
-          question_id: 'rto_q2',
-          type: 'mcq',
-          question: 'When should you lock the manifest?',
-          option_a: 'Before scanning',
-          option_b: 'After all shipments scanned',
-          option_c: 'Any time',
-          option_d: 'Never',
-          correct_index: '1',
-          model_answer: '',
-          points: '20'
-        },
-        {
-          process_name: 'RTO Bagging',
-          version: '1.0',
-          question_id: 'rto_q3',
-          type: 'subjective',
-          question: 'Explain why RTO shipments must be bagged separately.',
-          option_a: '',
-          option_b: '',
-          option_c: '',
-          option_d: '',
-          correct_index: '',
-          model_answer: 'RTO shipments are bagged separately to prevent mixing with forward shipments, which could cause delivery to wrong addresses and customer complaints.',
-          points: '30'
-        }
-      ],
-      'Misroute Bagging': [
-        {
-          process_name: 'Misroute Bagging',
-          version: '1.2',
-          question_id: 'mis_q1',
-          type: 'mcq',
-          question: 'What is a misroute shipment?',
-          option_a: 'Delivered to wrong address',
-          option_b: 'Sent to wrong hub',
-          option_c: 'Damaged shipment',
-          option_d: 'RTO shipment',
-          correct_index: '1',
-          model_answer: '',
-          points: '20'
-        }
-      ]
-    };
-
-    return questionBank[processName] || [];
-  },
-
-  getMockLeaderboard() {
-    return [
-      { email: 'alice@valmo.com', name: 'Alice Kumar', totalXP: '1250', level: '8', videosCompleted: '10', assessmentsPassed: '10', streak: '7' },
-      { email: 'bob@valmo.com', name: 'Bob Singh', totalXP: '980', level: '7', videosCompleted: '9', assessmentsPassed: '8', streak: '5' },
-      { email: 'charlie@valmo.com', name: 'Charlie Patel', totalXP: '750', level: '6', videosCompleted: '8', assessmentsPassed: '7', streak: '3' },
-      { email: 'diana@valmo.com', name: 'Diana Sharma', totalXP: '620', level: '5', videosCompleted: '7', assessmentsPassed: '6', streak: '2' },
-      { email: 'eve@valmo.com', name: 'Eve Reddy', totalXP: '450', level: '4', videosCompleted: '5', assessmentsPassed: '4', streak: '1' }
-    ];
   }
 };
 
-// Make API globally accessible
-window.API = API;
-
-console.log('[API] Loaded');
+console.log('[API] Supabase-backed API ready —', SUPABASE_URL);

@@ -78,7 +78,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .captain-process-overlay-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #F43397 0%, #9747FF 100%);
   color: white;
   padding: 24px;
   text-align: center;
@@ -188,7 +188,7 @@
 }
 
 .captain-process-overlay-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #F43397 0%, #9747FF 100%);
   color: white;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
@@ -200,8 +200,8 @@
 
 .captain-process-overlay-btn-secondary {
   background: white;
-  color: #667eea;
-  border: 2px solid #667eea;
+  color: #F43397;
+  border: 2px solid #F43397;
 }
 
 .captain-process-overlay-btn-secondary:hover {
@@ -619,7 +619,7 @@
 }
 
 .blocking-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #F43397 0%, #9747FF 100%);
   color: white;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
@@ -631,8 +631,8 @@
 
 .blocking-btn-secondary {
   background: white;
-  color: #667eea;
-  border: 2px solid #667eea;
+  color: #F43397;
+  border: 2px solid #F43397;
 }
 
 .blocking-btn-secondary:hover {

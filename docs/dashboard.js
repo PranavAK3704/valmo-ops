@@ -14,6 +14,7 @@ const AppState = {
   currentUser: null,
   userProgress: null,
   allProcesses: [],
+  assignedSims: [],
   leaderboard: [],
   currentTab: 'dashboard',
   initialized: false
@@ -76,7 +77,8 @@ async function init() {
     // Load all data
     await Promise.all([
       loadProcesses(),
-      loadLeaderboard()
+      loadLeaderboard(),
+      loadAssignedSims()
     ]);
     
     // Setup UI
@@ -116,6 +118,11 @@ function showLoading(show) {
 // ═══════════════════════════════════════════════════════════════
 // DATA LOADING
 // ═══════════════════════════════════════════════════════════════
+
+async function loadAssignedSims() {
+  AppState.assignedSims = await API.getAssignedSims(AppState.currentUser?.email);
+  console.log('[Dashboard] Assigned sims:', AppState.assignedSims.length);
+}
 
 async function loadProcesses() {
   console.log('[Dashboard] Loading processes...');
@@ -304,8 +311,55 @@ function formatTimeAgo(timestamp) {
 
 function renderTrainingTab() {
   const processList = document.getElementById('process-list');
-  
-  if (AppState.allProcesses.length === 0) {
+
+  // ── Your Queue (assigned / mandatory sims) ──────────────────────────────────
+  let queueHTML = '';
+  if (AppState.assignedSims.length > 0) {
+    const pendingAssigned = AppState.assignedSims.filter(s => !s.completed_at);
+    const doneAssigned    = AppState.assignedSims.filter(s =>  s.completed_at);
+
+    const simCards = AppState.assignedSims.map(s => {
+      const isDone    = !!s.completed_at;
+      const overdue   = s.due_date && !isDone && new Date(s.due_date) < new Date();
+      const dueLabel  = s.due_date
+        ? `<span class="queue-due ${overdue ? 'overdue' : ''}">
+             ${overdue ? '⚠️ Overdue' : '📅 Due'} ${new Date(s.due_date).toLocaleDateString()}
+           </span>`
+        : '';
+      const mandBadge = s.is_mandatory
+        ? '<span class="queue-badge mandatory">MANDATORY</span>'
+        : '<span class="queue-badge assigned">ASSIGNED</span>';
+      return `
+        <div class="queue-card ${isDone ? 'queue-done' : overdue ? 'queue-overdue' : ''}">
+          <div class="queue-card-left">
+            <div class="queue-card-title">${s.title || s.process_name}</div>
+            <div class="queue-card-meta">${mandBadge}${dueLabel}</div>
+          </div>
+          <div class="queue-card-right">
+            ${isDone
+              ? '<span class="queue-status-done">✅ Completed</span>'
+              : `<button class="process-action-btn primary small"
+                   onclick="openSimulation('${s.sim_id}','${s.process_name || s.title}')">
+                   ▶️ Start
+                 </button>`
+            }
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    queueHTML = `
+      <div class="queue-section">
+        <div class="queue-header">
+          <span class="queue-title">📋 Your Queue</span>
+          <span class="queue-count">${pendingAssigned.length} pending · ${doneAssigned.length} done</span>
+        </div>
+        <div class="queue-cards">${simCards}</div>
+      </div>
+    `;
+  }
+
+  if (AppState.allProcesses.length === 0 && AppState.assignedSims.length === 0) {
     processList.innerHTML = `
       <div class="loading-processes">
         <p>No training processes available</p>
@@ -313,36 +367,41 @@ function renderTrainingTab() {
     `;
     return;
   }
-  
-  processList.innerHTML = AppState.allProcesses.map(proc => {
-    const isCompleted = AppState.userProgress.assessmentsPassed.includes(proc.Process_Name);
-    const videoWatched = AppState.userProgress.videosWatched.includes(proc.Process_Name);
-    
+
+  const catalogCards = AppState.allProcesses.map(proc => {
+    const procName     = proc.Process_Name;
+    const isCompleted  = AppState.userProgress.assessmentsPassed.includes(proc.Sim_ID || procName);
+    const videoWatched = AppState.userProgress.videosWatched.includes(procName);
+    const hasSim       = !!proc.Sim_ID;
     return `
-      <div class="process-card" data-process="${proc.Process_Name}">
+      <div class="process-card" data-process="${procName}">
         <div class="process-header">
-          <div class="process-priority ${proc.Priority === 'MUST_KNOW' ? 'must-know' : 'good-to-know'}">
-            ${proc.Priority === 'MUST_KNOW' ? '🔴' : '🟡'}
-          </div>
+          <div class="process-priority must-know">🔴</div>
           <div class="process-title-section">
-            <div class="process-name">${proc.Process_Name}</div>
+            <div class="process-name">${procName}</div>
             <div class="process-badges">
-              ${proc.Status === 'NEW' ? '<span class="process-badge new">NEW</span>' : ''}
-              ${proc.Status === 'UPDATED' ? '<span class="process-badge updated">UPDATED</span>' : ''}
+              ${proc.Step_Count ? `<span class="process-badge new">${proc.Step_Count} steps</span>` : ''}
+              ${videoWatched ? '<span class="process-badge updated">✓ Practiced</span>' : ''}
             </div>
           </div>
         </div>
-        
+
         <div class="process-status ${isCompleted ? 'complete' : videoWatched ? 'video-done' : 'pending'}">
-          ${isCompleted ? '✅ 100% Complete' : videoWatched ? '⏳ Video Done - Assessment Pending' : '❌ Not Started'}
+          ${isCompleted ? '✅ Assessment Passed' : videoWatched ? '⏳ Practiced — Assessment Pending' : '❌ Not Started'}
         </div>
-        
+
         <div class="process-actions">
-          <button class="process-action-btn primary" onclick="watchVideo('${proc.Process_Name}', '${proc.Video_Link}')">
-            ${videoWatched ? '🎥 Watch Again' : '🎥 Watch Video'}
-          </button>
+          ${hasSim ? `
+            <button class="process-action-btn primary" onclick="openSimulation('${proc.Sim_ID}', '${procName}')">
+              ${videoWatched ? '🔁 Practice Again' : '▶️ Start Simulation'}
+            </button>
+          ` : `
+            <button class="process-action-btn primary" disabled style="opacity:0.4;cursor:default;">
+              📋 No simulation yet
+            </button>
+          `}
           ${!isCompleted ? `
-            <button class="process-action-btn secondary" onclick="takeAssessment('${proc.Process_Name}')">
+            <button class="process-action-btn secondary" onclick="takeAssessment('${procName}')">
               📝 Take Assessment
             </button>
           ` : ''}
@@ -350,7 +409,15 @@ function renderTrainingTab() {
       </div>
     `;
   }).join('');
-  
+
+  const catalogHTML = AppState.allProcesses.length === 0 ? '' :
+    `<div class="catalog-section">
+       <div class="catalog-header">All Processes</div>
+       ${catalogCards}
+     </div>`;
+
+  processList.innerHTML = queueHTML + catalogHTML;
+
   // Setup filters
   setupTrainingFilters();
 }
@@ -499,24 +566,41 @@ function renderAchievements() {
 // ACTIONS
 // ═══════════════════════════════════════════════════════════════
 
-function watchVideo(processName, videoLink) {
-  console.log('[Dashboard] Opening video:', processName);
-  
-  // Open video in new tab
-  window.open(videoLink, '_blank');
-  
-  // Mark as watched if not already
+function openSimulation(simId, processName) {
+  console.log('[Dashboard] Opening simulation:', processName);
+  const base = window.location.hostname === 'localhost'
+    ? 'http://localhost:3000/sim'
+    : 'https://slides-to-sim.vercel.app/sim';
+  const email = AppState.currentUser?.email || '';
+  const url = `${base}/${simId}${email ? '?email=' + encodeURIComponent(email) : ''}`;
+  window.open(url, '_blank');
+
+  // Mark as practiced if not already
   if (!AppState.userProgress.videosWatched.includes(processName)) {
     AppState.userProgress.videosWatched.push(processName);
     AppState.userProgress.stats.totalVideos++;
-    
-    // Award XP (basic - can enhance later)
-    AppState.userProgress.totalXP += 10;
-    
-    // Save progress
+    AppState.userProgress.totalXP += 30;
+
+    API.awardXP(AppState.currentUser.email, 30, `Practiced: ${processName}`, processName);
     API.saveUserProgress(AppState.currentUser.email, AppState.userProgress);
-    
-    // Re-render
+
+    renderDashboard();
+    renderTrainingTab();
+  }
+}
+
+function watchVideo(processName, videoLink) {
+  console.log('[Dashboard] Opening video:', processName);
+  if (videoLink) window.open(videoLink, '_blank');
+
+  if (!AppState.userProgress.videosWatched.includes(processName)) {
+    AppState.userProgress.videosWatched.push(processName);
+    AppState.userProgress.stats.totalVideos++;
+    AppState.userProgress.totalXP += 20;
+
+    API.awardXP(AppState.currentUser.email, 20, `Watched: ${processName}`, processName);
+    API.saveUserProgress(AppState.currentUser.email, AppState.userProgress);
+
     renderDashboard();
     renderTrainingTab();
   }
@@ -535,6 +619,7 @@ function openJarvis() {
 }
 
 // Make functions globally accessible
+window.openSimulation = openSimulation;
 window.watchVideo = watchVideo;
 window.takeAssessment = takeAssessment;
 window.openJarvis = openJarvis;
