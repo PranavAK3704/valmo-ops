@@ -350,19 +350,18 @@ class CaptainMetricsDashboard {
     sessions.forEach(s => {
       if (!breakdown[s.process_name]) {
         breakdown[s.process_name] = {
-          count: 0,
-          totalPCT: 0,
-          totalPauses: 0,
-          totalQueries: 0,
-          totalErrors: 0
+          count: 0, totalPCT: 0,
+          totalPauses: 0, totalPKRT: 0,
+          totalQueries: 0, totalErrors: 0
         };
       }
-
-      breakdown[s.process_name].count++;
-      breakdown[s.process_name].totalPCT += (s.metrics?.pct || 0);
-      breakdown[s.process_name].totalPauses += (s.pauses?.length || 0);
-      breakdown[s.process_name].totalQueries += (s.queries?.length || 0);
-      breakdown[s.process_name].totalErrors += (s.errors?.length || 0);
+      const b = breakdown[s.process_name];
+      b.count++;
+      b.totalPCT    += (s.metrics?.pct || 0);
+      b.totalPauses += (s.pauses?.length || 0);
+      b.totalPKRT   += (s.pauses || []).reduce((sum, p) => sum + (p.pkrt || 0), 0);
+      b.totalQueries+= (s.queries?.length || 0);
+      b.totalErrors += (s.errors?.length || 0);
     });
 
     return breakdown;
@@ -636,45 +635,43 @@ class CaptainMetricsDashboard {
     const breakdown = this.metrics.processBreakdown;
     const processes = Object.keys(breakdown);
 
-    if (processes.length === 0) {
-      return '';
-    }
+    if (processes.length === 0) return '';
 
     const rows = processes.map(proc => {
-      const data = breakdown[proc];
-      const avgPCT = Math.floor(data.totalPCT / data.count / 60); // minutes
-      const avgPauses = (data.totalPauses / data.count).toFixed(1);
-      const avgQueries = (data.totalQueries / data.count).toFixed(1);
-
+      const d = breakdown[proc];
+      const avgPCT  = d.count > 0 ? Math.floor(d.totalPCT  / d.count / 60) : 0;
+      const avgPKRT = d.totalPauses > 0 ? Math.floor(d.totalPKRT / d.totalPauses) : 0;
+      const iPER    = d.count > 0 ? (d.totalErrors / d.count) : 0;
+      const qfd     = Math.max(0, Math.round((1 - iPER * 0.1) * 100));
+      const qfdCol  = qfd >= 90 ? '#22c55e' : qfd >= 70 ? '#f59e0b' : '#ef4444';
+      const iperCol = iPER > 1 ? '#ef4444' : iPER > 0.5 ? '#f59e0b' : '#22c55e';
       return `
         <tr>
           <td class="metrics-table-process col-process">${this.escape(proc)}</td>
-          <td class="col-num">${data.count}</td>
+          <td class="col-num">${d.count}</td>
           <td class="col-num">${avgPCT}m</td>
-          <td class="col-num">${avgPauses}</td>
-          <td class="col-num">${avgQueries}</td>
-          <td class="col-num">${data.totalErrors}</td>
+          <td class="col-num">${avgPKRT > 0 ? avgPKRT + 's' : '—'}</td>
+          <td class="col-num" style="color:${qfdCol};font-weight:700">${qfd}%</td>
+          <td class="col-num" style="color:${iperCol};font-weight:700">${iPER.toFixed(2)}</td>
         </tr>
       `;
     }).join('');
 
     return `
       <div class="metrics-breakdown">
-        <h3>📋 Process Breakdown</h3>
+        <h3>📋 Per-Process Metrics</h3>
         <table class="metrics-table">
           <thead>
             <tr>
               <th class="col-process">Process</th>
               <th class="col-num">Sess</th>
               <th class="col-num">PCT</th>
-              <th class="col-num">Pause</th>
-              <th class="col-num">Query</th>
-              <th class="col-num">Err</th>
+              <th class="col-num">PKRT</th>
+              <th class="col-num">QFD</th>
+              <th class="col-num">iPER</th>
             </tr>
           </thead>
-          <tbody>
-            ${rows}
-          </tbody>
+          <tbody>${rows}</tbody>
         </table>
       </div>
     `;
