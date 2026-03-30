@@ -40,7 +40,11 @@ class CaptainMetricsDashboard {
     this.userEmail = userEmail;
     console.log('[Metrics Dashboard] Initializing for:', userEmail);
 
-    // Load session history
+    // Load hub from chrome.storage
+    const stored = await new Promise(r => chrome.storage.local.get(['userHub'], r));
+    this.userHub = stored.userHub || null;
+
+    // Load session history (own + hub peers from Supabase)
     await this.loadSessionHistory();
 
     // Calculate metrics
@@ -54,13 +58,38 @@ class CaptainMetricsDashboard {
   }
 
   /**
-   * Load session history
+   * Load session history — own localStorage + hub peers from Supabase
    */
   async loadSessionHistory() {
     const historyKey = `captain_session_history_${this.userEmail}`;
     const result = await metricsStorage.get([historyKey]);
     this.sessionHistory = result[historyKey] || [];
-    console.log('[Metrics Dashboard] Loaded', this.sessionHistory.length, 'sessions');
+    console.log('[Metrics Dashboard] Loaded', this.sessionHistory.length, 'local sessions');
+
+    // Fetch hub-wide sessions from Supabase if hub is set
+    if (this.userHub && typeof SUPABASE_CONFIG !== 'undefined') {
+      try {
+        const url = `${SUPABASE_CONFIG.url}/rest/v1/captain_sessions?select=email,process_name,pct,total_pkrt,pause_count,query_count,error_count,completed_at&order=completed_at.desc&limit=500`;
+        const res = await fetch(url, {
+          headers: {
+            apikey:        SUPABASE_CONFIG.anonKey,
+            Authorization: `Bearer ${SUPABASE_CONFIG.anonKey}`,
+          }
+        });
+        if (res.ok) {
+          const rows = await res.json();
+          // Filter to hub peers only (email list from agent_profiles not available here,
+          // so we keep own sessions from localStorage and use Supabase rows as hub context)
+          this.hubSessions = rows;
+          console.log('[Metrics Dashboard] Loaded', rows.length, 'hub sessions from Supabase');
+        }
+      } catch (e) {
+        console.warn('[Metrics Dashboard] Could not load hub sessions:', e.message);
+        this.hubSessions = [];
+      }
+    } else {
+      this.hubSessions = [];
+    }
   }
 
   /**
@@ -483,8 +512,8 @@ class CaptainMetricsDashboard {
         
         <!-- Header -->
         <div class="metrics-header">
-          <h2>📊 Performance Metrics</h2>
-          <p class="metrics-subtitle">Last 30 days • ${this.metrics.totalSessions} sessions</p>
+          <h2>📊 My Metrics</h2>
+          <p class="metrics-subtitle">${this.userHub ? `🏢 ${this.userHub} · ` : ''}Last 30 days · ${this.metrics.totalSessions} sessions</p>
         </div>
 
         <!-- Key Metrics Cards -->
@@ -498,8 +527,11 @@ class CaptainMetricsDashboard {
         <!-- Correlation Signal -->
         ${this.getCorrelationSignal()}
 
-        <!-- Process Breakdown -->
+        <!-- My Process Breakdown -->
         ${this.getProcessBreakdownHTML()}
+
+        <!-- Hub Process Breakdown -->
+        ${this.getHubBreakdownHTML()}
 
       </div>
     `;
@@ -667,6 +699,58 @@ class CaptainMetricsDashboard {
               <th class="col-num">Sess</th>
               <th class="col-num">PCT</th>
               <th class="col-num">PKRT</th>
+              <th class="col-num">QFD</th>
+              <th class="col-num">iPER</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  /**
+   * Hub-wide process breakdown (from Supabase sessions, all captains in hub)
+   */
+  getHubBreakdownHTML() {
+    if (!this.userHub || !this.hubSessions || this.hubSessions.length === 0) return '';
+
+    const byProc = {};
+    this.hubSessions.forEach(s => {
+      const p = s.process_name || 'Unknown';
+      if (!byProc[p]) byProc[p] = { count: 0, totalPCT: 0, totalPauses: 0, totalErrors: 0 };
+      byProc[p].count++;
+      byProc[p].totalPCT    += s.pct          || 0;
+      byProc[p].totalPauses += s.pause_count  || 0;
+      byProc[p].totalErrors += s.error_count  || 0;
+    });
+
+    const rows = Object.entries(byProc).sort((a,b) => b[1].count - a[1].count).map(([proc, d]) => {
+      const avgPCT   = d.count > 0 ? Math.floor(d.totalPCT / d.count / 60) : 0;
+      const avgPauses = d.count > 0 ? (d.totalPauses / d.count) : 0;
+      const iPER      = d.count > 0 ? (d.totalErrors / d.count) : 0;
+      const qfdCol   = avgPauses <= 1 ? '#22c55e' : avgPauses <= 3 ? '#f59e0b' : '#ef4444';
+      const iperCol  = iPER > 1 ? '#ef4444' : iPER > 0.5 ? '#f59e0b' : '#22c55e';
+      return `
+        <tr>
+          <td class="metrics-table-process col-process">${this.escape(proc)}</td>
+          <td class="col-num">${d.count}</td>
+          <td class="col-num">${avgPCT > 0 ? avgPCT + 'm' : '—'}</td>
+          <td class="col-num" style="color:${qfdCol};font-weight:700">${avgPauses.toFixed(1)}</td>
+          <td class="col-num" style="color:${iperCol};font-weight:700">${iPER.toFixed(2)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <div class="metrics-breakdown">
+        <h3>🏢 ${this.escape(this.userHub)} — All Processes</h3>
+        <table class="metrics-table">
+          <thead>
+            <tr>
+              <th class="col-process">Process</th>
+              <th class="col-num">Sess</th>
+              <th class="col-num">PCT</th>
               <th class="col-num">QFD</th>
               <th class="col-num">iPER</th>
             </tr>

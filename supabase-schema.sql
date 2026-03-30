@@ -54,6 +54,28 @@ CREATE INDEX IF NOT EXISTS idx_cap_sessions_email   ON captain_sessions(email);
 CREATE INDEX IF NOT EXISTS idx_cap_sessions_process ON captain_sessions(process_name);
 CREATE INDEX IF NOT EXISTS idx_cap_sessions_date    ON captain_sessions(completed_at DESC);
 
+-- Per-pause detail — enables QFD bifurcation by query/issue type
+CREATE TABLE IF NOT EXISTS captain_pauses (
+  id                   UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id           TEXT NOT NULL,
+  email                TEXT NOT NULL,
+  process_name         TEXT,
+  pause_index          INTEGER,          -- 0-based position within the session
+  pause_reason         TEXT,             -- issue text typed by captain
+  resolution_method    TEXT,             -- 'jarvis' | 'video' | 'other'
+  resolution_successful BOOLEAN,
+  pkrt                 INTEGER,          -- seconds (pause to resume duration)
+  chat_transcript      JSONB,            -- [{role, content}] if method = jarvis
+  video_watched        TEXT,             -- video name if method = video
+  paused_at            TIMESTAMPTZ,
+  resumed_at           TIMESTAMPTZ,
+  created_at           TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_cap_pauses_session  ON captain_pauses(session_id);
+CREATE INDEX IF NOT EXISTS idx_cap_pauses_email    ON captain_pauses(email);
+CREATE INDEX IF NOT EXISTS idx_cap_pauses_process  ON captain_pauses(process_name);
+ALTER TABLE captain_pauses DISABLE ROW LEVEL SECURITY;
+
 -- L1 ART metrics — daily snapshot per agent per queue
 CREATE TABLE IF NOT EXISTS l1_art_metrics (
   id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,

@@ -263,23 +263,17 @@ class ProcessPulseOverlay {
             <button class="valmo-close" id="valmo-close">✕</button>
           </div>
 
-          <div class="valmo-welcome">
-            👋 Hi Captain! <br>
-            I’m your support assistant. <br>
-            You can:
-            <ul>
-              <li>🎥 Watch training videos for this tab</li>
-              <li>🤖 Ask Jarvis anything</li>
-            </ul>
-          </div>
-
           <div class="valmo-nav">
             <button class="valmo-nav-btn active" data-tab="videos">🎥 Videos</button>
             <button class="valmo-nav-btn" data-tab="jarvis">🤖 Jarvis AI</button>
           </div>
-          
+
           <div class="valmo-content">
             <div id="videos-view" class="valmo-view active">
+              <div class="valmo-search-wrap">
+                <input id="valmo-search" class="valmo-search-input" type="text" placeholder="🔍 Search all processes..." autocomplete="off" />
+              </div>
+              <div id="valmo-tab-label"></div>
               <div id="valmo-process-list"></div>
             </div>
 
@@ -322,6 +316,17 @@ class ProcessPulseOverlay {
       });
     });
 
+    // Wire up search
+    document.getElementById('valmo-search')?.addEventListener('input', (e) => {
+      const q = e.target.value.trim().toLowerCase();
+      if (!q) {
+        this.renderProcesses(this.matches || []);
+        return;
+      }
+      const all = this.allProcesses || this.matches || [];
+      this.renderProcesses(all.filter(p => p.process_name.toLowerCase().includes(q)), false);
+    });
+
     // Wait for DOM to be fully ready before requesting matches
     setTimeout(() => {
       this.requestMatches();
@@ -349,27 +354,18 @@ class ProcessPulseOverlay {
         window.open(link, '_blank', 'noopener,noreferrer');
       }
 
-      // Mark Complete
-      const completeBtn = e.target.closest('.valmo-complete-btn');
-      if (completeBtn && !completeBtn.disabled) {
-        const processName = completeBtn.dataset.process;
-        const XP_PER_VIDEO = 30;
-        // Award XP via gamification system
-        if (window.gamificationSystem?.awardXP) {
-          window.gamificationSystem.awardXP(XP_PER_VIDEO, `Watched: ${processName}`, processName);
+      // Start Process
+      const startBtn = e.target.closest('.valmo-start-btn');
+      if (startBtn) {
+        const processName = startBtn.dataset.process;
+        if (window.captainTimer?.startProcess) {
+          window.captainTimer.startProcess(processName);
+          this.closePanel();
+        } else {
+          // fallback: switch to timer tab if available
+          const timerBtn = document.querySelector('[data-tab="timer"]');
+          if (timerBtn) { timerBtn.click(); }
         }
-        // Bridge to content script for chrome.storage + Supabase
-        window.postMessage({
-          type: 'CAPTAIN_VIDEO_COMPLETE',
-          email: currentUser?.email,
-          processName,
-          xpAwarded: XP_PER_VIDEO
-        }, '*');
-        // Immediate UI update
-        completeBtn.textContent = '✅ Done';
-        completeBtn.classList.add('done');
-        completeBtn.disabled = true;
-        completeBtn.closest('.valmo-process-card')?.classList.add('valmo-card-done');
       }
     });
   }
@@ -406,8 +402,25 @@ class ProcessPulseOverlay {
   updateSidebar(matches) {
     this.matches = matches;
     const root = document.getElementById(OVERLAY_ID);
-    const tab = document.getElementById('valmo-tab');
-    
+    const tab  = document.getElementById('valmo-tab');
+
+    // Cache all processes for search (background may send all via GET_ALL_PROCESSES)
+    if (!this.allProcesses || this.allProcesses.length === 0) {
+      chrome.runtime.sendMessage({ type: 'GET_ALL_PROCESSES' }, (r) => {
+        if (r?.processes) this.allProcesses = r.processes;
+      });
+    }
+
+    // Tab label
+    const labelEl = document.getElementById('valmo-tab-label');
+    if (labelEl) {
+      if (matches.length > 0) {
+        labelEl.innerHTML = `<div class="valmo-tab-context">Videos for this tab</div>`;
+      } else {
+        labelEl.innerHTML = '';
+      }
+    }
+
     if (matches.length > 0) {
       root?.classList.add('active');
       tab?.classList.add('pulse');
@@ -419,42 +432,30 @@ class ProcessPulseOverlay {
     }
   }
   
-  renderProcesses(matches) {
+  renderProcesses(matches, isTabMatched = true) {
     const list = document.getElementById('valmo-process-list');
     if (!list) return;
 
-    if(!matches || matches.length === 0) {
+    if (!matches || matches.length === 0) {
       list.innerHTML = `
         <div class="valmo-empty">
-          <div class="valmo-empty-icon">📂</div> 
-          <h3>No processes yet</h3>
-          <p>This tab does not have documented training videos yet.</p>
+          <div class="valmo-empty-icon">📂</div>
+          <h3>${isTabMatched ? 'No processes for this tab' : 'No results'}</h3>
+          <p>Use the search bar above to find any process.</p>
         </div>
       `;
       return;
     }
-    
-    // Load completed videos from chrome.storage.local
-    const completedKey = `captain_completed_videos_${currentUser?.email || ''}`;
-    chrome.storage.local.get([completedKey], (result) => {
-      const completed = result[completedKey] || {};
 
-      list.innerHTML = matches.map(proc => {
-        const isDone = !!completed[proc.process_name];
-        return `
-          <div class="valmo-process-card ${isDone ? 'valmo-card-done' : ''}">
-            <div class="valmo-process-name">${this.escape(proc.process_name)}</div>
-            <div class="valmo-process-meta">📂 ${this.escape(proc.start_tab)}</div>
-            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-              <button class="valmo-video-btn" data-video-link="${this.escape(proc.video_link || '')}">🎥 Watch</button>
-              <button class="valmo-complete-btn ${isDone ? 'done' : ''}" data-process="${this.escape(proc.process_name)}" ${isDone ? 'disabled' : ''}>
-                ${isDone ? '✅ Done' : '✓ Complete'}
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
-    });
+    list.innerHTML = matches.map(proc => `
+      <div class="valmo-process-card">
+        <div class="valmo-process-name">${this.escape(proc.process_name)}</div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          <button class="valmo-video-btn" data-video-link="${this.escape(proc.video_link || '')}">🎥 Watch Video</button>
+          <button class="valmo-start-btn" data-process="${this.escape(proc.process_name)}">▶ Start Process</button>
+        </div>
+      </div>
+    `).join('');
   }
   
   togglePanel() {

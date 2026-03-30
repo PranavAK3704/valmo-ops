@@ -449,7 +449,7 @@ class CaptainTimerSystem {
     // Clear storage
     await timerStorage.remove(['captain_current_session']);
 
-    // Sync completed session to Supabase via content script bridge
+    // Sync completed session + per-pause detail to Supabase via content script bridge
     window.postMessage({
       type: 'SUPABASE_CAPTAIN_SESSION',
       data: {
@@ -462,7 +462,8 @@ class CaptainTimerSystem {
         query_count:  metrics.query_count,
         error_count:  metrics.error_count,
         started_at:   new Date(completedSession.start_time).toISOString(),
-        completed_at: new Date(completedSession.end_time).toISOString()
+        completed_at: new Date(completedSession.end_time).toISOString(),
+        pauses:       completedSession.pauses  // full pause objects for captain_pauses table
       }
     }, '*');
 

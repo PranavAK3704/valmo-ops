@@ -144,6 +144,31 @@ const supabaseSync = (() => {
     });
   }
 
+  // ── Per-pause detail sync ────────────────────────────────────────────────
+
+  async function syncCaptainPauses(sessionData) {
+    const pauses = sessionData.pauses || [];
+    if (!pauses.length) return;
+    const rows = pauses.map((p, i) => ({
+      session_id:            sessionData.session_id,
+      email:                 sessionData.email,
+      process_name:          sessionData.process_name,
+      pause_index:           i,
+      pause_reason:          p.reason          || null,
+      resolution_method:     p.resolution_method || null,
+      resolution_successful: p.resolution_successful ?? null,
+      pkrt:                  p.pkrt             || null,
+      chat_transcript:       p.chat_transcript  || null,
+      video_watched:         p.video_watched    || null,
+      paused_at:             p.pause_time  ? new Date(p.pause_time).toISOString()  : null,
+      resumed_at:            p.resume_time ? new Date(p.resume_time).toISOString() : null,
+      created_at:            new Date().toISOString()
+    }));
+    for (const row of rows) {
+      await insert('captain_pauses', row);
+    }
+  }
+
   // ── L1 ART metric sync ───────────────────────────────────────────────────
 
   async function syncARTMetrics(email, artSummary, artByQueue, countByQueue, reopenCount) {
@@ -184,6 +209,7 @@ const supabaseSync = (() => {
     switch (event.data.type) {
       case 'SUPABASE_CAPTAIN_SESSION':
         await syncCaptainSession(event.data.data);
+        await syncCaptainPauses(event.data.data);  // per-pause detail
         break;
       case 'SUPABASE_SIM_COMPLETE':
         const d = event.data.data;
@@ -194,5 +220,5 @@ const supabaseSync = (() => {
 
   console.log('[Supabase Sync] Ready —', URL ? 'connected' : 'no config');
 
-  return { insert, upsert, syncProfile, syncXP, syncAchievement, syncLevelUp, syncCaptainSession, syncARTMetrics, syncSimCompletion };
+  return { insert, upsert, syncProfile, syncXP, syncAchievement, syncLevelUp, syncCaptainSession, syncCaptainPauses, syncARTMetrics, syncSimCompletion };
 })();
