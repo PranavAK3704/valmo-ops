@@ -639,19 +639,19 @@ class CaptainMetricsDashboard {
 
     const rows = processes.map(proc => {
       const d = breakdown[proc];
-      const avgPCT  = d.count > 0 ? Math.floor(d.totalPCT  / d.count / 60) : 0;
-      const avgPKRT = d.totalPauses > 0 ? Math.floor(d.totalPKRT / d.totalPauses) : 0;
-      const iPER    = d.count > 0 ? (d.totalErrors / d.count) : 0;
-      const qfd     = Math.max(0, Math.round((1 - iPER * 0.1) * 100));
-      const qfdCol  = qfd >= 90 ? '#22c55e' : qfd >= 70 ? '#f59e0b' : '#ef4444';
-      const iperCol = iPER > 1 ? '#ef4444' : iPER > 0.5 ? '#f59e0b' : '#22c55e';
+      const avgPCT   = d.count > 0 ? Math.floor(d.totalPCT  / d.count / 60) : 0;
+      const avgPKRT  = d.totalPauses > 0 ? Math.floor(d.totalPKRT / d.totalPauses) : 0;
+      const avgPauses= d.count > 0 ? (d.totalPauses / d.count) : 0;
+      const iPER     = d.count > 0 ? (d.totalErrors / d.count) : 0;
+      const qfdCol   = avgPauses <= 1 ? '#22c55e' : avgPauses <= 3 ? '#f59e0b' : '#ef4444';
+      const iperCol  = iPER > 1 ? '#ef4444' : iPER > 0.5 ? '#f59e0b' : '#22c55e';
       return `
         <tr>
           <td class="metrics-table-process col-process">${this.escape(proc)}</td>
           <td class="col-num">${d.count}</td>
           <td class="col-num">${avgPCT}m</td>
           <td class="col-num">${avgPKRT > 0 ? avgPKRT + 's' : '—'}</td>
-          <td class="col-num" style="color:${qfdCol};font-weight:700">${qfd}%</td>
+          <td class="col-num" style="color:${qfdCol};font-weight:700">${avgPauses.toFixed(1)}</td>
           <td class="col-num" style="color:${iperCol};font-weight:700">${iPER.toFixed(2)}</td>
         </tr>
       `;
