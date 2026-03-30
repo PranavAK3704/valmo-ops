@@ -44,7 +44,7 @@
 .valmo-nav {
   display: flex;
   gap: 8px;
-  padding: 0 12px 10px 12px;
+  padding: 12px 12px 10px 12px;
 }
 
 .valmo-nav-btn {
@@ -293,3 +293,13 @@
 .valmo-video-btn:hover{background:#9747FF15;border-color:#9747FF}
 .valmo-start-btn{background:linear-gradient(135deg,#F43397,#9747FF);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
 .valmo-start-btn:hover{opacity:.9;transform:translateY(-1px)}
+
+/* ─── Good To Know Summary Pill ─── */
+.valmo-gtksummary{display:flex;align-items:center;justify-content:space-between;margin:6px 12px 10px;padding:10px 14px;background:#fffbeb;border:1.5px solid #f59e0b40;border-radius:10px;font-size:12px;font-weight:600;color:#92400e;cursor:pointer;transition:background .15s}
+.valmo-gtksummary:hover{background:#fef3c7}
+.valmo-gtksummary-arrow{font-size:14px;color:#f59e0b}
+
+/* ─── Timer Search Result Actions ─── */
+.timer-search-result-actions{display:flex;gap:6px;margin-top:8px}
+.timer-result-watch-btn{background:#f0f0f8;border:1.5px solid #9747FF40;color:#9747FF;border-radius:16px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer}
+.timer-result-start-btn{background:linear-gradient(135deg,#F43397,#9747FF);color:#fff;border:none;border-radius:16px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer}

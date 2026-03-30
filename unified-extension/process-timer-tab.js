@@ -203,14 +203,21 @@ class ProcessTimerTab {
     }
 
     resultsEl.innerHTML = results.slice(0, 5).map(proc => `
-      <div class="timer-search-result" data-process="${this.escape(proc.process_name)}">
+      <div class="timer-search-result">
         <div class="timer-search-result-name">${this.escape(proc.process_name)}</div>
         <div class="timer-search-result-meta">📂 ${this.escape(proc.url_module || 'General')}</div>
+        <div class="timer-search-result-actions">
+          ${proc.video_link ? `<button class="timer-result-watch-btn" data-link="${this.escape(proc.video_link)}">🎥 Watch</button>` : ''}
+          <button class="timer-result-start-btn" data-process="${this.escape(proc.process_name)}">▶ Start</button>
+        </div>
       </div>
     `).join('');
 
-    resultsEl.querySelectorAll('.timer-search-result').forEach(result => {
-      result.addEventListener('click', () => this.startProcess(result.dataset.process));
+    resultsEl.querySelectorAll('.timer-result-start-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => { e.stopPropagation(); this.startProcess(btn.dataset.process); });
+    });
+    resultsEl.querySelectorAll('.timer-result-watch-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => { e.stopPropagation(); window.open(btn.dataset.link, '_blank'); });
     });
   }
 

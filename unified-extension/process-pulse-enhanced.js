@@ -112,17 +112,14 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
       `;
     }
 
-    // GOOD TO KNOW Section
+    // GOOD TO KNOW — summary pill only, redirects to Training Hub
     if (categorized.goodToKnow.length > 0) {
+      const gtk = categorized.goodToKnow;
+      const gtkPending = gtk.filter(p => !this.userProgress?.hasCompleted(p.process_name)).length;
       html += `
-        <div class="valmo-category-section">
-          <div class="valmo-category-header good-to-know">
-            <span class="valmo-category-icon">🟡</span>
-            <span class="valmo-category-title">GOOD TO KNOW</span>
-          </div>
-          <div class="valmo-category-list">
-            ${categorized.goodToKnow.map(p => this.renderProcessCard(p)).join('')}
-          </div>
+        <div class="valmo-gtksummary" onclick="window.open('https://pranavak3704.github.io/valmo-ops/','_blank')" title="View in Training Hub">
+          <span>📘 ${gtkPending} Good To Know remaining</span>
+          <span class="valmo-gtksummary-arrow">→</span>
         </div>
       `;
     }
@@ -204,13 +201,11 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
         
         <div class="valmo-process-actions">
           <button class="valmo-video-btn" data-video-link="${this.escape(proc.video_link || '')}" data-process-name="${this.escape(proc.process_name)}" data-process-version="${this.escape(proc.version || '1.0')}">
-            🎥 ${completed ? 'Watch Again' : 'Watch Video'}
+            🎥 Watch Video
           </button>
-          ${completed ? '' : `
-            <button class="valmo-mark-complete-btn" data-process-name="${this.escape(proc.process_name)}" data-process-version="${this.escape(proc.version || '1.0')}" data-video-link="${this.escape(proc.video_link || '')}">
-              ✓ Mark Complete
-            </button>
-          `}
+          <button class="valmo-start-btn" data-process="${this.escape(proc.process_name)}">
+            ▶ Start
+          </button>
         </div>
       </div>
     `;
@@ -308,43 +303,25 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
   attachListeners() {
     super.attachListeners();
 
-    // Delegate for mark complete buttons
+    // Delegate for process list actions
     document.getElementById('valmo-process-list')?.addEventListener('click', async (e) => {
-      const markBtn = e.target.closest('.valmo-mark-complete-btn');
-      if (markBtn) {
-        const processName = markBtn.dataset.processName;
-        const version = markBtn.dataset.processVersion;
-        const videoLink = markBtn.dataset.videoLink;
-
-        // Ensure userProgress is ready (initProgressTracking is async)
-        if (!this.userProgress) {
-          await processProgress.init(this.getCurrentUserEmail());
-          this.userProgress = processProgress;
+      // Start Process button
+      const startBtn = e.target.closest('.valmo-start-btn');
+      if (startBtn) {
+        const processName = startBtn.dataset.process;
+        if (window.captainTimerSystem?.startProcess) {
+          const ok = await window.captainTimerSystem.startProcess(processName);
+          if (!ok) { alert('Complete the current process first'); }
         }
-
-        // Immediate visual feedback
-        markBtn.textContent = '✅ Done';
-        markBtn.disabled = true;
-        markBtn.closest('.valmo-process-card')?.classList.add('valmo-card-done');
-
-        await this.userProgress.markCompleted(processName, version, videoLink);
-
-        // Re-render to update UI
-        this.renderProcesses(this.matches);
-        this.renderProgressStats();
-
-        // Show success
-        this.showSuccessToast(`✅ Marked "${processName}" as complete!`);
+        return;
       }
 
-      // Handle watch button with completion tracking
+      // Watch Video button
       const watchBtn = e.target.closest('.valmo-video-btn, .valmo-video-btn-small');
       if (watchBtn) {
         const processName = watchBtn.dataset.processName;
         const version = watchBtn.dataset.processVersion;
         const videoLink = watchBtn.dataset.videoLink;
-
-        // Mark as viewed (not necessarily completed)
         if (processName && version && this.userProgress) {
           await this.userProgress.markViewed(processName, version, videoLink);
         }
