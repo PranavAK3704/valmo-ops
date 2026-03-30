@@ -270,9 +270,6 @@ class ProcessPulseOverlay {
 
           <div class="valmo-content">
             <div id="videos-view" class="valmo-view active">
-              <div class="valmo-search-wrap">
-                <input id="valmo-search" class="valmo-search-input" type="text" placeholder="🔍 Search all processes..." autocomplete="off" />
-              </div>
               <div id="valmo-tab-label"></div>
               <div id="valmo-process-list"></div>
             </div>
@@ -314,17 +311,6 @@ class ProcessPulseOverlay {
         e.target.classList.add("active");
         document.getElementById(e.target.dataset.tab + "-view").classList.add("active");
       });
-    });
-
-    // Wire up search
-    document.getElementById('valmo-search')?.addEventListener('input', (e) => {
-      const q = e.target.value.trim().toLowerCase();
-      if (!q) {
-        this.renderProcesses(this.matches || []);
-        return;
-      }
-      const all = this.allProcesses || this.matches || [];
-      this.renderProcesses(all.filter(p => p.process_name.toLowerCase().includes(q)), false);
     });
 
     // Wait for DOM to be fully ready before requesting matches
@@ -403,13 +389,6 @@ class ProcessPulseOverlay {
     this.matches = matches;
     const root = document.getElementById(OVERLAY_ID);
     const tab  = document.getElementById('valmo-tab');
-
-    // Cache all processes for search (background may send all via GET_ALL_PROCESSES)
-    if (!this.allProcesses || this.allProcesses.length === 0) {
-      chrome.runtime.sendMessage({ type: 'GET_ALL_PROCESSES' }, (r) => {
-        if (r?.processes) this.allProcesses = r.processes;
-      });
-    }
 
     // Tab label
     const labelEl = document.getElementById('valmo-tab-label');
@@ -827,7 +806,7 @@ class L1ChatbotOverlayEnhanced {
     }).join('');
   }
   
-  renderSmartAnswer(answer, originalQuery) {
+  renderSmartAnswer(answer) {
     const container = document.getElementById('sop-view-container');
     if (!container) return;
     
@@ -853,7 +832,7 @@ class L1ChatbotOverlayEnhanced {
   formatSmartAnswer(text) {
     let formatted = text;
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    formatted = formatted.replace(/(\d+)\.\s+([^\n]+)/g, (match, num, content) => {
+    formatted = formatted.replace(/(\d+)\.\s+([^\n]+)/g, (_match, num, content) => {
       return `
         <div class="step-item">
           <div class="step-number">${num}</div>

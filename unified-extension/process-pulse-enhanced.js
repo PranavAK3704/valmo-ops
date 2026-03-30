@@ -252,14 +252,15 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
     let progressSection = document.getElementById('valmo-progress-stats');
     
     if (!progressSection) {
-      // Insert before videos view
-      const videosView = document.getElementById('videos-view');
-      if (!videosView) return;
+      // Insert at top of metrics-view (falls back to videos-view if metrics not injected yet)
+      const metricsView = document.getElementById('metrics-view');
+      const target = metricsView || document.getElementById('videos-view');
+      if (!target) return;
 
       progressSection = document.createElement('div');
       progressSection.id = 'valmo-progress-stats';
       progressSection.className = 'valmo-progress-stats';
-      videosView.insertBefore(progressSection, videosView.firstChild);
+      target.insertBefore(progressSection, target.firstChild);
     }
 
     const completionPercent = stats.completionPercentage || 0;
