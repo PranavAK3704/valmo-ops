@@ -151,8 +151,39 @@ async function init() {
       const histKey    = `captain_session_history_${currentUser.email}`;
       const storedData = await new Promise(r => chrome.storage.local.get([seqKey, histKey, 'captain_current_session'], r));
       const savedSequence      = storedData[seqKey]                || {};
-      const savedHistory       = storedData[histKey]               || [];
+      let   savedHistory       = storedData[histKey]               || [];
       const savedActiveSession = storedData.captain_current_session || null;
+
+      // Content scripts share localStorage with the host page (same origin).
+      // Read any history that exists in page localStorage but hasn't been
+      // bridged to chrome.storage.local yet (sessions from before this fix,
+      // or any write that didn't complete before the previous page unload).
+      try {
+        const lsRaw = localStorage.getItem(histKey);
+        if (lsRaw) {
+          const lsHistory = JSON.parse(lsRaw);
+          if (lsHistory && lsHistory.length > 0) {
+            if (savedHistory.length === 0) {
+              // Nothing in chrome.storage yet — use localStorage data directly
+              savedHistory = lsHistory;
+            } else {
+              // Merge: add any LS entries whose session_id isn't already in savedHistory
+              const knownIds = new Set(savedHistory.map(s => s.session_id));
+              const newEntries = lsHistory.filter(s => s.session_id && !knownIds.has(s.session_id));
+              if (newEntries.length > 0) {
+                savedHistory = [...savedHistory, ...newEntries]
+                  .sort((a, b) => (b.completed_at || 0) - (a.completed_at || 0))
+                  .slice(0, 100);
+              }
+            }
+            // Back-fill chrome.storage.local with the merged set
+            chrome.storage.local.set({ [histKey]: savedHistory });
+            console.log('[Captain Timer] History merged from localStorage:', savedHistory.length, 'sessions');
+          }
+        }
+      } catch (e) {
+        console.warn('[Captain Timer] Could not read localStorage history:', e.message);
+      }
 
       window.postMessage({
         type:          'INIT_CAPTAIN_TIMER',
