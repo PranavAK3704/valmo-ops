@@ -332,7 +332,7 @@ SELECT
   c.completed_at
 FROM sim_assignments a
 JOIN simulations s ON s.id = a.sim_id
-JOIN agent_profiles p ON p.hub_code = a.assigned_to AND p.role = 'Captain'
+JOIN agent_profiles p ON p.hub = a.assigned_to AND p.role = 'Captain'
 LEFT JOIN sim_completions c
   ON c.sim_id = a.sim_id AND c.email = p.email
 WHERE a.assign_type = 'hub';
