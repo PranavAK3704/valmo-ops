@@ -262,6 +262,186 @@ const supabaseSync = (() => {
     }, 'email,sim_id');
   }
 
+  // ── Phase 3: Query Bifurcation Engine ──────────────────────────────────────
+  //
+  // After pauses are written to Supabase, classify each pause_reason into a
+  // bucket. Runs fire-and-forget (never blocks session completion).
+  //
+  // Buckets:
+  //   PROCESS_GAP          — doesn't know the steps
+  //   POLICY_UNCLEAR        — knows steps, unsure of rules/thresholds
+  //   SYSTEM_ISSUE          — tool/platform problem, not captain's fault
+  //   CUSTOMER_COMPLEXITY   — edge case, not a knowledge gap
+  //   REPETITIVE            — same reason seen in prior sessions (auto-detected)
+  //   UNCLASSIFIED          — Groq couldn't determine or reason was empty
+
+  const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+  const GROQ_MODEL    = 'llama3-8b-8192';
+
+  // iPER bucket weights — how much each bucket contributes to error probability
+  const BUCKET_WEIGHTS = {
+    PROCESS_GAP:        0.8,
+    REPETITIVE:         1.0,   // worst signal — seen this before, still pausing
+    POLICY_UNCLEAR:     0.4,
+    CUSTOMER_COMPLEXITY:0.1,
+    SYSTEM_ISSUE:       0.0,   // not captain's fault
+    UNCLASSIFIED:       0.2
+  };
+
+  /**
+   * Check if a pause_reason is repetitive by comparing against the last
+   * N sessions stored in localStorage for this captain + process.
+   * Returns true if the same reason (case-insensitive, trimmed) was seen before.
+   */
+  function isRepetitive(reason, email, processName) {
+    if (!reason) return false;
+    const key = `captain_session_history_${email}`;
+    try {
+      const stored = localStorage.getItem(key);
+      if (!stored) return false;
+      const history = JSON.parse(stored);
+      const norm    = reason.toLowerCase().trim();
+      // Check last 5 sessions for the same process
+      const priorSessions = history
+        .filter(s => s.process_name === processName)
+        .slice(0, 5);
+      for (const s of priorSessions) {
+        for (const p of (s.pauses || [])) {
+          if (p.reason && p.reason.toLowerCase().trim() === norm) return true;
+        }
+      }
+    } catch (e) { /* ignore parse errors */ }
+    return false;
+  }
+
+  /**
+   * Classify all pause reasons in one Groq call (batch).
+   * Returns array of buckets in the same order as reasons[].
+   */
+  async function groqClassifyBatch(reasons, groqKey) {
+    const validReasons = reasons.map(r => r || '(no reason given)');
+    const prompt = `You are classifying why a logistics operations captain paused a process.
+
+For each pause reason below, return EXACTLY one of these labels:
+PROCESS_GAP | POLICY_UNCLEAR | SYSTEM_ISSUE | CUSTOMER_COMPLEXITY | UNCLASSIFIED
+
+Definitions:
+- PROCESS_GAP: captain doesn't know the steps (e.g. "how do I handle misroute?")
+- POLICY_UNCLEAR: knows steps but unsure of rules/thresholds (e.g. "what's the TAT?")
+- SYSTEM_ISSUE: tool or platform problem, not captain's fault (e.g. "app not loading")
+- CUSTOMER_COMPLEXITY: unusual edge case, not a training gap (e.g. "customer has 3 orders")
+- UNCLASSIFIED: empty, gibberish, or genuinely unclear
+
+Respond with ONLY a JSON array of labels, one per reason, in the same order.
+Example: ["PROCESS_GAP","SYSTEM_ISSUE","POLICY_UNCLEAR"]
+
+Reasons:
+${validReasons.map((r, i) => `${i + 1}. ${r}`).join('\n')}`;
+
+    const res = await fetch(GROQ_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${groqKey}`
+      },
+      body: JSON.stringify({
+        model:       GROQ_MODEL,
+        messages:    [{ role: 'user', content: prompt }],
+        max_tokens:  200,
+        temperature: 0
+      })
+    });
+
+    if (!res.ok) throw new Error(`Groq ${res.status}: ${await res.text()}`);
+    const data    = await res.json();
+    const content = data.choices?.[0]?.message?.content?.trim() || '[]';
+
+    // Extract JSON array from response (handle any surrounding text)
+    const match = content.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error('Groq response not parseable: ' + content);
+    const buckets = JSON.parse(match[0]);
+
+    const valid = new Set(['PROCESS_GAP','POLICY_UNCLEAR','SYSTEM_ISSUE','CUSTOMER_COMPLEXITY','UNCLASSIFIED']);
+    return buckets.map(b => valid.has(b) ? b : 'UNCLASSIFIED');
+  }
+
+  /**
+   * PATCH bucket onto an existing captain_pauses row.
+   * Uses session_id + pause_index as the unique locator.
+   */
+  async function patchPauseBucket(sessionId, pauseIndex, bucket) {
+    if (!URL || !KEY) return;
+    try {
+      const res = await fetch(
+        `${URL}/rest/v1/captain_pauses?session_id=eq.${encodeURIComponent(sessionId)}&pause_index=eq.${pauseIndex}`,
+        {
+          method:  'PATCH',
+          headers: {
+            'Content-Type':  'application/json',
+            'apikey':        KEY,
+            'Authorization': `Bearer ${KEY}`,
+            'Prefer':        'return=minimal'
+          },
+          body: JSON.stringify({ bucket })
+        }
+      );
+      if (!res.ok) console.warn('[Classifier] PATCH bucket failed:', await res.text());
+    } catch (e) {
+      console.warn('[Classifier] PATCH error:', e.message);
+    }
+  }
+
+  /**
+   * Main entry point — called after syncCaptainPauses().
+   * Fire-and-forget: never throws, never blocks.
+   */
+  async function classifyPauses(sessionData) {
+    const pauses   = sessionData.pauses || [];
+    const groqKey  = typeof CHATBOT_CONFIG !== 'undefined' ? CHATBOT_CONFIG.api_key : '';
+    if (!pauses.length || !groqKey) return;
+
+    try {
+      const reasons  = pauses.map(p => p.reason || '');
+      const buckets  = [];
+
+      // Step 1 — local REPETITIVE check (no API call needed)
+      for (const [i, p] of pauses.entries()) {
+        if (isRepetitive(p.reason, sessionData.email, sessionData.process_name)) {
+          buckets[i] = 'REPETITIVE';
+        } else {
+          buckets[i] = null; // needs Groq
+        }
+      }
+
+      // Step 2 — batch Groq call for non-REPETITIVE pauses
+      const needsGroq = reasons.filter((_, i) => buckets[i] === null);
+      if (needsGroq.length > 0) {
+        const groqBuckets = await groqClassifyBatch(needsGroq, groqKey);
+        let gi = 0;
+        for (let i = 0; i < buckets.length; i++) {
+          if (buckets[i] === null) buckets[i] = groqBuckets[gi++] || 'UNCLASSIFIED';
+        }
+      }
+
+      // Step 3 — PATCH each bucket back to Supabase
+      for (const [i, bucket] of buckets.entries()) {
+        await patchPauseBucket(sessionData.session_id, i, bucket);
+      }
+
+      // Step 4 — store buckets in localStorage for iPER calculation
+      const histKey = `captain_pause_buckets_${sessionData.email}`;
+      const stored  = await new Promise(r => chrome.storage.local.get([histKey], r));
+      const log     = stored[histKey] || [];
+      log.unshift({ session_id: sessionData.session_id, process_name: sessionData.process_name, buckets, created_at: Date.now() });
+      if (log.length > 200) log.splice(200); // keep last 200 sessions
+      chrome.storage.local.set({ [histKey]: log });
+
+      console.log('[Classifier] ✅ Classified', buckets.length, 'pauses:', buckets);
+    } catch (e) {
+      console.warn('[Classifier] Failed (non-blocking):', e.message);
+    }
+  }
+
   // ── Listen for postMessages from page-context scripts ──────────────────────
 
   window.addEventListener('message', async (event) => {
@@ -270,6 +450,7 @@ const supabaseSync = (() => {
       case 'SUPABASE_CAPTAIN_SESSION':
         await syncCaptainSession(event.data.data);
         await syncCaptainPauses(event.data.data);
+        classifyPauses(event.data.data); // fire-and-forget, never blocks
         break;
       case 'SUPABASE_SIM_COMPLETE': {
         const d = event.data.data;
@@ -287,8 +468,8 @@ const supabaseSync = (() => {
   return {
     insert, upsert,
     syncProfile, syncXP, syncAchievement, syncLevelUp,
-    syncCaptainSession, syncCaptainPauses,
+    syncCaptainSession, syncCaptainPauses, classifyPauses,
     syncARTMetrics, syncSimCompletion,
-    drainQueue
+    drainQueue, BUCKET_WEIGHTS
   };
 })();

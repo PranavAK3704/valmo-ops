@@ -265,23 +265,57 @@ class CaptainMetricsDashboard {
   }
 
   /**
-   * Calculate iPER (In-Process Error Rate)
-   * Formula: total errors / total sessions. Lower = better.
-   * Reads s.metrics.error_count (stored at session completion) with
-   * fallback to s.errors.length for older session objects.
+   * Calculate iPER (In-Process Error Rate) — bucket-weighted, inferred signal.
+   *
+   * Formula per session:
+   *   score = avg(BUCKET_WEIGHTS[bucket]) across all pauses in that session
+   *   iPER  = avg(score) across all sessions in last 30 days
+   *
+   * Bucket weights (from supabaseSync.BUCKET_WEIGHTS):
+   *   REPETITIVE=1.0, PROCESS_GAP=0.8, POLICY_UNCLEAR=0.4,
+   *   CUSTOMER_COMPLEXITY=0.1, SYSTEM_ISSUE=0.0, UNCLASSIFIED=0.2
+   *
+   * Falls back to error_count-based calc if no bucket data available yet.
    */
   calculateIPER(sessions) {
     if (sessions.length === 0) {
-      return {
-        average: 0,
-        total: 0,
-        trend: [],
-        byProcess: {}
-      };
+      return { average: 0, total: 0, trend: [], byProcess: {} };
     }
 
-    const totalErrors = sessions.reduce((sum, s) => sum + (s.metrics?.error_count ?? s.errors?.length ?? 0), 0);
-    const avgErrors = totalErrors / sessions.length;
+    // Load bucket logs from localStorage
+    const bucketKey  = `captain_pause_buckets_${this.userEmail}`;
+    let   bucketLog  = [];
+    try {
+      const raw = localStorage.getItem(bucketKey);
+      if (raw) bucketLog = JSON.parse(raw);
+    } catch (e) { /* ignore */ }
+
+    const weights = (typeof supabaseSync !== 'undefined' && supabaseSync.BUCKET_WEIGHTS)
+      ? supabaseSync.BUCKET_WEIGHTS
+      : { PROCESS_GAP: 0.8, REPETITIVE: 1.0, POLICY_UNCLEAR: 0.4,
+          CUSTOMER_COMPLEXITY: 0.1, SYSTEM_ISSUE: 0.0, UNCLASSIFIED: 0.2 };
+
+    // Build a map of session_id → bucket score
+    const bucketScoreBySession = {};
+    for (const entry of bucketLog) {
+      if (!entry.buckets?.length) continue;
+      const score = entry.buckets.reduce((sum, b) => sum + (weights[b] ?? 0.2), 0) / entry.buckets.length;
+      bucketScoreBySession[entry.session_id] = +score.toFixed(3);
+    }
+
+    const hasBucketData = Object.keys(bucketScoreBySession).length > 0;
+
+    let sessionScores;
+    if (hasBucketData) {
+      sessionScores = sessions.map(s =>
+        bucketScoreBySession[s.session_id] ?? (s.metrics?.error_count ?? 0) > 0 ? 0.5 : 0
+      );
+    } else {
+      // Fallback: raw error_count until classifier has run at least once
+      sessionScores = sessions.map(s => s.metrics?.error_count ?? s.errors?.length ?? 0);
+    }
+
+    const avgErrors = sessionScores.reduce((a, b) => a + b, 0) / sessionScores.length;
 
     // Trend
     const trend = this.calculateDailyTrend(sessions, 'errors', 7);
@@ -609,9 +643,9 @@ class CaptainMetricsDashboard {
           <span class="metrics-card-title">iPER</span>
         </div>
         <div class="metrics-card-value">${iper.average.toFixed(2)}</div>
-        <div class="metrics-card-label">Errors per Session</div>
-        <div class="metrics-card-detail">
-          ${iper.total} total errors
+        <div class="metrics-card-label">Error Signal Score</div>
+        <div class="metrics-card-detail" style="color:${iper.average < 0.2 ? '#22c55e' : iper.average < 0.5 ? '#f59e0b' : '#ef4444'}">
+          ${iper.average < 0.2 ? 'Clean execution' : iper.average < 0.5 ? 'Some anomalies' : 'Needs attention'}
         </div>
         ${this.getMiniChart(iper.trend)}
       </div>
