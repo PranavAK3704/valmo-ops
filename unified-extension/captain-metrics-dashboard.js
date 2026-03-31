@@ -478,23 +478,22 @@ class CaptainMetricsDashboard {
   }
 
   /**
-   * Inject tab content
+   * Inject tab content (or overwrite if stale content exists)
    */
   injectTabContent() {
     const content = document.querySelector('.valmo-content');
     if (!content) return;
 
-    if (document.getElementById('metrics-view')) {
-      console.log('[Metrics Dashboard] Tab content already exists');
-      return;
+    let metricsView = document.getElementById('metrics-view');
+    if (!metricsView) {
+      metricsView = document.createElement('div');
+      metricsView.id = 'metrics-view';
+      metricsView.className = 'valmo-view';
+      content.appendChild(metricsView);
     }
 
-    const metricsView = document.createElement('div');
-    metricsView.id = 'metrics-view';
-    metricsView.className = 'valmo-view';
+    // Always write our content (overwrite anything stale from other scripts)
     metricsView.innerHTML = this.getDashboardHTML();
-
-    content.appendChild(metricsView);
 
     console.log('[Metrics Dashboard] ✅ Tab content injected');
   }
@@ -503,19 +502,23 @@ class CaptainMetricsDashboard {
    * Get dashboard HTML
    */
   getDashboardHTML() {
-    if (!this.metrics || this.metrics.totalSessions === 0) {
+    const hasPersonal = this.metrics && this.metrics.totalSessions > 0;
+    const hasHub = this.hubSessions && this.hubSessions.length > 0;
+
+    if (!hasPersonal && !hasHub) {
       return this.getEmptyStateHTML();
     }
 
     return `
       <div class="metrics-dashboard">
-        
+
         <!-- Header -->
         <div class="metrics-header">
           <h2>📊 My Metrics</h2>
-          <p class="metrics-subtitle">${this.userHub ? `🏢 ${this.userHub} · ` : ''}Last 30 days · ${this.metrics.totalSessions} sessions</p>
+          <p class="metrics-subtitle">${this.userHub ? `🏢 ${this.userHub} · ` : ''}Last 30 days${hasPersonal ? ` · ${this.metrics.totalSessions} sessions` : ''}</p>
         </div>
 
+        ${hasPersonal ? `
         <!-- Key Metrics Cards -->
         <div class="metrics-cards">
           ${this.getPKRTCard()}
@@ -524,11 +527,13 @@ class CaptainMetricsDashboard {
           ${this.getIPERCard()}
         </div>
 
-        <!-- Correlation Signal -->
-        ${this.getCorrelationSignal()}
-
         <!-- My Process Breakdown -->
         ${this.getProcessBreakdownHTML()}
+        ` : `
+        <div class="metrics-no-personal">
+          <p>No personal sessions yet. Start a process to track pKRT, PCT, QFD &amp; iPER.</p>
+        </div>
+        `}
 
         <!-- Hub Process Breakdown -->
         ${this.getHubBreakdownHTML()}

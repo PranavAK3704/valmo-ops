@@ -19,6 +19,14 @@ let overlayInstance = null;
 
 console.log("[Valmo Ops] Content script loaded (Enhanced UI)");
 
+// Re-init when user logs in via popup (email set after content script already ran)
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.userEmail?.newValue && !currentUser) {
+    console.log('[Valmo Ops] Login detected via storage change — re-initializing');
+    init();
+  }
+});
+
 // ─── Analytics Helper ───
 const analytics = {
   log: (event, data) => {
@@ -109,23 +117,6 @@ async function init() {
       }
     } else {
       console.warn('[Gamification] myStatsTab not loaded');
-    }
-
-    // Initialize Metrics Dashboard
-    if (window.metricsDashboard) {
-      try {
-        await window.metricsDashboard.init(currentUser.email);
-
-        // Wait for sidebar to be ready, then inject metrics tab
-        setTimeout(() => {
-          window.metricsDashboard.injectDashboard();
-          console.log('[Gamification] ✅ Metrics dashboard injected');
-        }, 600);
-      } catch (error) {
-        console.error('[Gamification] Metrics init error:', error);
-      }
-    } else {
-      console.warn('[Gamification] metricsDashboard not loaded');
     }
 
     // Initialize Captain Timer System by injecting into page context
@@ -222,8 +213,6 @@ function injectOverlay() {
   } else if (role === 'L1 Agent' && currentPlatform === 'kapture') {
     overlayInstance = new L1ChatbotOverlayEnhanced();
     overlayInstance.inject();
-  } else if (role === 'SC Manager' && currentPlatform === 'log10') {
-    overlayInstance = new SCManagerOverlay();
   }
 }
 
@@ -233,8 +222,6 @@ function shouldShowOverlay() {
   
   if (role === 'Captain' && currentPlatform === 'log10') return true;
   if (role === 'L1 Agent' && currentPlatform === 'kapture') return true;
-  if (role === 'SC Manager' && currentPlatform === 'log10') return true;
-  
   return false;
 }
 

@@ -44,7 +44,6 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
     chrome.runtime.sendMessage({ type: 'GET_ALL_PROCESSES' }, (response) => {
       if (response?.processes) {
         this.allProcesses = response.processes;
-        this.renderProgressStats();
       }
     });
   }
@@ -487,7 +486,6 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
           temp.userProgress = processProgress;
 
           temp.renderProcesses(response.processes);
-          temp.renderProgressStats();
 
           console.log('[Phase 3] ✅ Enhanced UI rendered');
         } else {
