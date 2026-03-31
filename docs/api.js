@@ -62,20 +62,29 @@ const API = {
    * Returns array matching the shape that dashboard.js expects.
    */
   async getProcesses() {
+    // Same Google Sheet as the extension — single source of truth
+    const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTKDX4o1H_sZSJS_tUDo68N1SyjV3m3kbnkucjLe-4y1cUR3PBb2O49fbfNe2AQt-Oiuiu0Egj-wi_P/pub?output=csv';
     try {
-      const rows = await sb('simulations', '?select=id,title,process_name,hub,step_count&order=created_at.desc');
-      return rows.map(r => ({
-        id:           r.id,
-        Process_Name: r.process_name || r.title,
-        Priority:     'MUST_KNOW',   // all captain processes are must-know
-        Status:       'NEW',
-        Video_Link:   null,          // sims are played in the extension, no external video
-        Sim_ID:       r.id,
-        Hub:          r.hub,
-        Step_Count:   r.step_count
-      }));
+      const res  = await fetch(SHEET_URL);
+      const text = await res.text();
+      const rows = text.trim().split('\n').slice(1); // skip header row
+      return rows
+        .map(row => row.split(','))
+        .filter(cols => cols[0] && cols[1])
+        .map(cols => ({
+          Process_Name: cols[0]?.trim().replace(/"/g, ''),
+          url_module:   cols[1]?.trim().replace(/"/g, ''),
+          start_tab:    cols[2]?.trim().replace(/"/g, ''),
+          Video_Link:   cols[3]?.trim().replace(/"/g, '') || null,
+          Priority:     (cols[5]?.trim().replace(/"/g, '') || 'GOOD_TO_KNOW').toUpperCase(),
+          Status:       cols[6]?.trim().replace(/"/g, '') || 'STABLE',
+          date_added:   cols[7]?.trim().replace(/"/g, '') || '',
+          version:      cols[9]?.trim().replace(/"/g, '') || '1.0',
+          Sim_ID:       null,   // sims linked separately via Supabase when available
+          Step_Count:   null,
+        }));
     } catch (e) {
-      console.error('[API] getProcesses failed:', e);
+      console.error('[API] getProcesses (sheet) failed:', e);
       return [];
     }
   },
