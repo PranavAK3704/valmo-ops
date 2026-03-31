@@ -51,8 +51,13 @@ class CaptainMetricsDashboard {
     // Load session history (own + hub peers from Supabase)
     await this.loadSessionHistory();
 
-    // Calculate metrics
-    this.calculateMetrics();
+    // Calculate metrics — wrapped so a calculation error never blocks tab injection
+    try {
+      this.calculateMetrics();
+    } catch (e) {
+      console.error('[Metrics Dashboard] calculateMetrics error (showing empty state):', e);
+      this.metrics = this.getEmptyMetrics();
+    }
 
     // Inject dashboard
     await this.injectDashboard();
@@ -315,7 +320,8 @@ class CaptainMetricsDashboard {
       sessionScores = sessions.map(s => s.metrics?.error_count ?? s.errors?.length ?? 0);
     }
 
-    const avgErrors = sessionScores.reduce((a, b) => a + b, 0) / sessionScores.length;
+    const totalErrors = sessionScores.reduce((a, b) => a + b, 0);
+    const avgErrors   = sessionScores.length > 0 ? totalErrors / sessionScores.length : 0;
 
     // Trend
     const trend = this.calculateDailyTrend(sessions, 'errors', 7);
@@ -341,8 +347,8 @@ class CaptainMetricsDashboard {
 
     return {
       average: avgErrors,
-      total: totalErrors,
-      trend: trend,
+      total:   totalErrors,
+      trend:   trend,
       byProcess: byProcess
     };
   }

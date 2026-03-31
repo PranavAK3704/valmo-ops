@@ -19,7 +19,21 @@ let overlayInstance = null;
 
 console.log("[Valmo Ops] Content script loaded (Enhanced UI)");
 
-// Re-init when user logs in via popup (email set after content script already ran)
+// Re-init when user logs in via popup (direct message — most reliable)
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === 'USER_LOGGED_IN' && !currentUser) {
+    console.log('[Valmo Ops] USER_LOGGED_IN received — initializing');
+    init();
+  }
+  if (msg.type === 'USER_LOGGED_OUT') {
+    currentUser = null;
+    overlayInstance = null;
+    const el = document.getElementById(OVERLAY_ID);
+    if (el) el.remove();
+  }
+});
+
+// Fallback: re-init via storage change (catches edge cases where message didn't arrive)
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.userEmail?.newValue && !currentUser) {
     console.log('[Valmo Ops] Login detected via storage change — re-initializing');
