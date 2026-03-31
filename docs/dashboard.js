@@ -89,10 +89,14 @@ async function init() {
     renderLeaderboard();
     renderAchievements();
     
-    // Hide loading screen
+    // Hide loading screen, then honour hash-based tab navigation
     setTimeout(() => {
       showLoading(false);
       AppState.initialized = true;
+      const hashTab = window.location.hash.replace('#', '');
+      if (hashTab && document.getElementById(`${hashTab}-tab`)) {
+        switchTab(hashTab);
+      }
       console.log('[Dashboard] ✅ Initialized');
     }, 800);
     
@@ -374,9 +378,9 @@ function renderTrainingTab() {
     const videoWatched = AppState.userProgress.videosWatched.includes(procName);
     const hasSim       = !!proc.Sim_ID;
     return `
-      <div class="process-card" data-process="${procName}">
+      <div class="process-card" data-process="${procName}" data-priority="${proc.Priority || 'GOOD_TO_KNOW'}">
         <div class="process-header">
-          <div class="process-priority must-know">🔴</div>
+          <div class="process-priority ${proc.Priority === 'MUST_KNOW' ? 'must-know' : 'good-to-know'}">${proc.Priority === 'MUST_KNOW' ? '🔴' : '🟡'}</div>
           <div class="process-title-section">
             <div class="process-name">${procName}</div>
             <div class="process-badges">
@@ -439,27 +443,18 @@ function setupTrainingFilters() {
 }
 
 function filterProcesses(filter) {
-  const cards = document.querySelectorAll('.process-card');
-  
-  cards.forEach(card => {
+  document.querySelectorAll('.process-card').forEach(card => {
+    const priority    = card.dataset.priority || 'GOOD_TO_KNOW';
     const processName = card.dataset.process;
-    const process = AppState.allProcesses.find(p => p.Process_Name === processName);
     const isCompleted = AppState.userProgress.assessmentsPassed.includes(processName);
-    const videoWatched = AppState.userProgress.videosWatched.includes(processName);
-    
+
     let show = true;
-    
-    if (filter === 'must-know') {
-      show = process.Priority === 'MUST_KNOW';
-    } else if (filter === 'good-to-know') {
-      show = process.Priority === 'GOOD_TO_KNOW';
-    } else if (filter === 'completed') {
-      show = isCompleted;
-    } else if (filter === 'pending') {
-      show = !isCompleted;
-    }
-    
-    card.style.display = show ? 'block' : 'none';
+    if (filter === 'must-know')      show = priority === 'MUST_KNOW';
+    else if (filter === 'good-to-know') show = priority !== 'MUST_KNOW';
+    else if (filter === 'completed') show = isCompleted;
+    else if (filter === 'pending')   show = !isCompleted;
+
+    card.style.display = show ? '' : 'none';
   });
 }
 

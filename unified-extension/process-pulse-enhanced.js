@@ -117,7 +117,7 @@ class ProcessPulseOverlayEnhanced extends ProcessPulseOverlay {
       const gtk = categorized.goodToKnow;
       const gtkPending = gtk.filter(p => !this.userProgress?.hasCompleted(p.process_name)).length;
       html += `
-        <div class="valmo-gtksummary" onclick="window.open('https://pranavak3704.github.io/valmo-ops/','_blank')" title="View in Training Hub">
+        <div class="valmo-gtksummary" onclick="window.open('https://pranavak3704.github.io/valmo-ops/#training','_blank')" title="View in Training Hub">
           <span>📘 ${gtkPending} Good To Know remaining</span>
           <span class="valmo-gtksummary-arrow">→</span>
         </div>
