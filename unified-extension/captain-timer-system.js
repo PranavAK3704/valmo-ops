@@ -718,7 +718,7 @@ window.addEventListener('message', async (event) => {
       }
       
       if (window.captainMetricsDashboard) {
-        await window.captainMetricsDashboard.init(event.data.email);
+        await window.captainMetricsDashboard.init(event.data.email, event.data.hub, event.data.supabaseUrl, event.data.supabaseKey);
       }
       
       // Mark as ready

@@ -149,6 +149,9 @@ async function init() {
       window.postMessage({
         type: 'INIT_CAPTAIN_TIMER',
         email: currentUser.email,
+        hub: currentUser.hub || null,
+        supabaseUrl: typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.url : '',
+        supabaseKey: typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.anon_key : '',
         processes: processes,
         sequence: savedSequence,
         groqApiKey: typeof CHATBOT_CONFIG !== 'undefined' ? CHATBOT_CONFIG.api_key : '',

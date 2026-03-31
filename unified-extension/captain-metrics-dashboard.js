@@ -35,14 +35,17 @@ class CaptainMetricsDashboard {
 
   /**
    * Initialize dashboard
+   * @param {string} userEmail
+   * @param {string|null} userHub   — passed from content script (no chrome API needed)
+   * @param {string} supabaseUrl    — passed from content script
+   * @param {string} supabaseKey    — passed from content script
    */
-  async init(userEmail) {
-    this.userEmail = userEmail;
-    console.log('[Metrics Dashboard] Initializing for:', userEmail);
-
-    // Load hub from chrome.storage
-    const stored = await new Promise(r => chrome.storage.local.get(['userHub'], r));
-    this.userHub = stored.userHub || null;
+  async init(userEmail, userHub, supabaseUrl, supabaseKey) {
+    this.userEmail  = userEmail;
+    this.userHub    = userHub    || null;
+    this.sbUrl      = supabaseUrl || '';
+    this.sbKey      = supabaseKey || '';
+    console.log('[Metrics Dashboard] Initializing for:', userEmail, '| hub:', this.userHub);
 
     // Load session history (own + hub peers from Supabase)
     await this.loadSessionHistory();
@@ -67,13 +70,13 @@ class CaptainMetricsDashboard {
     console.log('[Metrics Dashboard] Loaded', this.sessionHistory.length, 'local sessions');
 
     // Fetch hub-wide sessions from Supabase if hub is set
-    if (this.userHub && typeof SUPABASE_CONFIG !== 'undefined') {
+    if (this.userHub && this.sbUrl && this.sbKey) {
       try {
-        const url = `${SUPABASE_CONFIG.url}/rest/v1/captain_sessions?select=email,process_name,pct,total_pkrt,pause_count,query_count,error_count,completed_at&order=completed_at.desc&limit=500`;
+        const url = `${this.sbUrl}/rest/v1/captain_sessions?select=email,process_name,pct,total_pkrt,pause_count,query_count,error_count,completed_at&order=completed_at.desc&limit=500`;
         const res = await fetch(url, {
           headers: {
-            apikey:        SUPABASE_CONFIG.anonKey,
-            Authorization: `Bearer ${SUPABASE_CONFIG.anonKey}`,
+            apikey:        this.sbKey,
+            Authorization: `Bearer ${this.sbKey}`,
           }
         });
         if (res.ok) {
