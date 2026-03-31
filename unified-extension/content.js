@@ -30,6 +30,9 @@ chrome.runtime.onMessage.addListener((msg) => {
     overlayInstance = null;
     const el = document.getElementById(OVERLAY_ID);
     if (el) el.remove();
+    // Clear active session — fresh login should never restore a previous process
+    chrome.storage.local.remove(['captain_current_session']);
+    localStorage.removeItem('captain_current_session');
   }
 });
 
