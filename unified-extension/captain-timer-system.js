@@ -170,13 +170,13 @@ class CaptainTimerSystem {
         return;
       }
 
-      this.currentSession = session;
-      console.log('[Captain Timer] Restored active session:', this.currentSession.process_name, '| running:', session.timer_running);
+      // Always restore as paused — hard refresh interrupts the timer.
+      // User must explicitly hit Resume to continue.
+      session.timer_running = false;
+      await timerStorage.set({ captain_current_session: session });
 
-      // Only restart timer if it was actually running (not paused) before
-      if (session.timer_running) {
-        this.startTimer();
-      }
+      this.currentSession = session;
+      console.log('[Captain Timer] Restored session (paused on refresh):', this.currentSession.process_name);
     }
   }
 
