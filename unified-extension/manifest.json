@@ -46,7 +46,6 @@
         "styles/captain-pause-modal.css",
         "styles/captain-metrics-dashboard.css",
         "gamification/my-stats-tab.css",
-        "styles/metrics-dashboard.css",
         "tat-system/tat-dashboard.css"
       ],
       "js": [

@@ -169,19 +169,18 @@ async function init() {
       const savedActiveSession = storedData.captain_current_session || null;
 
       // Content scripts share localStorage with the host page (same origin).
-      // Read any history that exists in page localStorage but hasn't been
-      // bridged to chrome.storage.local yet (sessions from before this fix,
-      // or any write that didn't complete before the previous page unload).
+      // Read history + sequence from localStorage and merge with chrome.storage —
+      // handles sessions/sequence written before the storage bridge fix, or any
+      // async write that didn't complete before the previous page unload.
       try {
-        const lsRaw = localStorage.getItem(histKey);
-        if (lsRaw) {
-          const lsHistory = JSON.parse(lsRaw);
+        // ── History merge ──────────────────────────────────────────────────────
+        const lsHistRaw = localStorage.getItem(histKey);
+        if (lsHistRaw) {
+          const lsHistory = JSON.parse(lsHistRaw);
           if (lsHistory && lsHistory.length > 0) {
             if (savedHistory.length === 0) {
-              // Nothing in chrome.storage yet — use localStorage data directly
               savedHistory = lsHistory;
             } else {
-              // Merge: add any LS entries whose session_id isn't already in savedHistory
               const knownIds = new Set(savedHistory.map(s => s.session_id));
               const newEntries = lsHistory.filter(s => s.session_id && !knownIds.has(s.session_id));
               if (newEntries.length > 0) {
@@ -190,13 +189,26 @@ async function init() {
                   .slice(0, 100);
               }
             }
-            // Back-fill chrome.storage.local with the merged set
             chrome.storage.local.set({ [histKey]: savedHistory });
             console.log('[Captain Timer] History merged from localStorage:', savedHistory.length, 'sessions');
           }
         }
+
+        // ── Sequence merge ─────────────────────────────────────────────────────
+        const lsSeqRaw = localStorage.getItem(seqKey);
+        if (lsSeqRaw) {
+          const lsSeq = JSON.parse(lsSeqRaw);
+          if (lsSeq && typeof lsSeq === 'object' && Object.keys(lsSeq).length > 0) {
+            if (Object.keys(savedSequence).length === 0) {
+              // Nothing in chrome.storage — use localStorage copy directly
+              Object.assign(savedSequence, lsSeq);
+              chrome.storage.local.set({ [seqKey]: savedSequence });
+              console.log('[Captain Timer] Sequence restored from localStorage:', Object.keys(savedSequence).length, 'processes');
+            }
+          }
+        }
       } catch (e) {
-        console.warn('[Captain Timer] Could not read localStorage history:', e.message);
+        console.warn('[Captain Timer] Could not merge localStorage data:', e.message);
       }
 
       window.postMessage({
@@ -1424,67 +1436,12 @@ class L1ChatbotOverlayEnhanced {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// OVERLAY 3: SC Manager (UNCHANGED)
-// ═══════════════════════════════════════════════════════════════
-
-/*class SCManagerOverlay {
-  inject() {
-    const html = `
-      <div id="${OVERLAY_ID}" class="valmo-overlay valmo-sc">
-        <div class="valmo-tab" id="valmo-tab">
-          <div class="valmo-icon">📚</div>
-          <div class="valmo-label">SOPs</div>
-        </div>
-        <div class="valmo-panel" id="valmo-panel">
-          <div class="valmo-header">
-            <span class="valmo-title">SC Manager SOPs</span>
-            <button class="valmo-close" id="valmo-close">✕</button>
-          </div>
-          <div class="valmo-content">
-            <div class="valmo-placeholder">
-              <div class="valmo-placeholder-icon">🚧</div>
-              <h3>Coming Soon</h3>
-              <p>SC Manager SOPs will be available once requirements are finalized.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = html;
-    document.body.appendChild(wrapper.firstElementChild);
-    
-    document.getElementById('valmo-tab')?.addEventListener('click', () => {
-      document.getElementById('valmo-panel')?.classList.toggle('open');
-    });
-    document.getElementById('valmo-close')?.addEventListener('click', () => {
-      document.getElementById('valmo-panel')?.classList.remove('open');
-    });
-  }
-}*/
-
-// ─── Listen for login/logout ───
+// ─── Listen for PULSE_UPDATE ───
 chrome.runtime.onMessage.addListener((message) => {
-  console.log('[Valmo Ops] Received message:', message.type);
-
   if (message.type === 'PULSE_UPDATE') {
-    console.log('[Valmo Ops] PROCESS_UPDATE received, overlayInstance:', overlayInstance);
     if (overlayInstance instanceof ProcessPulseOverlay) {
       overlayInstance.updateSidebar(message.matches);
     }
-  }
-
-  if (message.type === 'USER_LOGGED_IN') {
-    currentUser = { email: message.email, role: message.role };
-    const existing = document.getElementById(OVERLAY_ID);
-    if (existing) existing.remove();
-    if (shouldShowOverlay()) injectOverlay();
-  } else if (message.type === 'USER_LOGGED_OUT') {
-    const existing = document.getElementById(OVERLAY_ID);
-    if (existing) existing.remove();
-    currentUser = null;
   }
 });
 

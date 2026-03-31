@@ -21,7 +21,6 @@ let resolvedHub = null; // { hub_code, hub_name }
 function detectRole(email) {
   const lower = email.toLowerCase().trim();
   if (lower.includes('_technotask@meesho.com')) return 'L1 Agent';
-  if (lower.endsWith('@meesho.com'))            return 'SC Manager';
   return 'Captain';
 }
 

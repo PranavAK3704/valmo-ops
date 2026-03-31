@@ -200,9 +200,13 @@ class CaptainMetricsDashboard {
     const totalPCT = sessions.reduce((sum, s) => sum + (s.metrics?.pct || 0), 0);
     const avgPCT = Math.floor(totalPCT / sessions.length);
 
-    // Benchmark (assume fleet average is 10% higher for demo)
-    const benchmark = Math.floor(avgPCT * 1.1);
-    const delta = avgPCT - benchmark;
+    // Benchmark: hub-wide avg PCT from Supabase (0 if no hub data yet)
+    let benchmark = 0;
+    if (this.hubSessions && this.hubSessions.length > 0) {
+      const hubTotal = this.hubSessions.reduce((sum, s) => sum + (s.pct || 0), 0);
+      benchmark = Math.floor(hubTotal / this.hubSessions.length);
+    }
+    const delta = benchmark > 0 ? avgPCT - benchmark : 0;
     const deltaPercent = benchmark > 0 ? Math.floor((delta / benchmark) * 100) : 0;
 
     // Trend
@@ -604,8 +608,8 @@ class CaptainMetricsDashboard {
         </div>
         <div class="metrics-card-value">${minutes} min</div>
         <div class="metrics-card-label">Avg Cycle Time</div>
-        <div class="metrics-card-detail ${deltaClass}">
-          ${deltaSign}${pct.deltaPercent}% vs fleet
+        <div class="metrics-card-detail ${pct.benchmark > 0 ? deltaClass : ''}">
+          ${pct.benchmark > 0 ? `${deltaSign}${pct.deltaPercent}% vs fleet` : 'No fleet data yet'}
         </div>
         ${this.getMiniChart(pct.trend)}
       </div>

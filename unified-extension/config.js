@@ -17,7 +17,6 @@ const SHEETS_CONFIG = {
   sops_url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTtfp2EauVkBu1RILwErMMDs7mfwdzC1V9CdP0bf4ZjEsoe_QEr7o1slJm5tsMxNIqMK6vudtYjHCql/pub?gid=1281163884&single=true&output=csv',
   templates_url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNGnSVBmO7sU79z_zNfAa9N2S0yUSDR6yyOBTtnEi_m-XGBV6eBK0H9DJMuaDp_l0YA4enSjTKzNsk/pub?gid=0&single=true&output=csv',
   
-  sc_sops_url: 'YOUR_SC_SOP_SHEET_PUBLISHED_CSV_URL',
   // Refresh interval (in milliseconds)
   // 300000 = 5 minutes
   refresh_interval: 300000
@@ -63,7 +62,7 @@ const CHATBOT_CONFIG = {
   use_claude_api: true,
 
   // ⭐ PASTE YOUR GROQ API KEY HERE ⭐
-  api_key: '',  // set your Groq key here locally — never commit
+  api_key: 'YOUR_GROQ_API_KEY_HERE',  // paste your key locally — never commit
 
   system_prompt: `You are a helpful L1 support agent assistant for Valmo logistics operations.
 Your job is to help L1 agents answer support tickets by searching through SOPs and providing clear guidance.

@@ -218,33 +218,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // SC Manager - Metabase fetch via bridge
-if (message.type === 'FETCH_METABASE_VIA_BRIDGE') {
-  (async () => {
-    try {
-      // Find Metabase tab
-      const tabs = await chrome.tabs.query({ url: 'https://metabase-main.bi.meeshogcp.in/*' });
-      
-      if (tabs.length === 0) {
-        sendResponse({ success: false, error: 'NO_METABASE_TAB' });
-        return;
-      }
-      
-      // Send message to Metabase tab's bridge
-      const result = await chrome.tabs.sendMessage(tabs[0].id, {
-        type: 'FETCH_METABASE_FROM_PAGE',
-        endpoint: message.endpoint
-      });
-      
-      sendResponse(result);
-      
-    } catch (err) {
-      sendResponse({ success: false, error: err.message });
-    }
-  })();
-  return true;
-}
-  
   sendResponse({ error: 'Unknown message type' });
 });
 

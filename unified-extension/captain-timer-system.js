@@ -140,6 +140,11 @@ class CaptainTimerSystem {
    * Content script receives this and saves to chrome.storage.local (persistent).
    */
   savePersonalSequence() {
+    // Write to localStorage synchronously first — survives hard refresh guaranteed
+    const seqKey = `captain_sequence_${this.userEmail}`;
+    try { localStorage.setItem(seqKey, JSON.stringify(this.processFrequency)); } catch (e) {}
+
+    // Also bridge to chrome.storage.local via content script
     window.postMessage({
       type: 'CAPTAIN_SAVE_SEQUENCE',
       email: this.userEmail,
