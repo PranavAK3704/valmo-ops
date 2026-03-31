@@ -67,7 +67,8 @@ class CaptainMetricsDashboard {
   }
 
   /**
-   * Load session history — own localStorage + hub peers from Supabase
+   * Load session history — own sessions from Supabase (source of truth),
+   * with localStorage as fallback. Hub peers also fetched for benchmarks.
    */
   async loadSessionHistory() {
     const historyKey = `captain_session_history_${this.userEmail}`;
@@ -75,52 +76,95 @@ class CaptainMetricsDashboard {
     this.sessionHistory = result[historyKey] || [];
     console.log('[Metrics Dashboard] Loaded', this.sessionHistory.length, 'local sessions');
 
-    // Fetch hub-wide sessions from Supabase — scoped to hub_code for efficiency
-    if (this.hubCode && this.sbUrl && this.sbKey) {
+    this.ownSessions  = null;   // own Supabase sessions (source of truth when available)
+    this.hubSessions  = [];     // all captains in hub (for benchmarks)
+
+    if (this.sbUrl && this.sbKey) {
+      const headers = { apikey: this.sbKey, Authorization: `Bearer ${this.sbKey}` };
       try {
-        const url = `${this.sbUrl}/rest/v1/captain_sessions?hub_code=eq.${encodeURIComponent(this.hubCode)}&select=email,process_name,pct,total_pkrt,pause_count,query_count,error_count,completed_at&order=completed_at.desc&limit=500`;
-        const res = await fetch(url, {
-          headers: {
-            apikey:        this.sbKey,
-            Authorization: `Bearer ${this.sbKey}`,
-          }
-        });
-        if (res.ok) {
-          const rows = await res.json();
-          // Filter to hub peers only (email list from agent_profiles not available here,
-          // so we keep own sessions from localStorage and use Supabase rows as hub context)
-          this.hubSessions = rows;
-          console.log('[Metrics Dashboard] Loaded', rows.length, 'hub sessions from Supabase');
+        // Own captain sessions — same data the admin panel uses
+        const ownUrl = `${this.sbUrl}/rest/v1/captain_sessions`
+          + `?email=eq.${encodeURIComponent(this.userEmail)}`
+          + `&select=session_id,process_name,pct,total_pkrt,pause_count,query_count,error_count,completed_at`
+          + `&order=completed_at.desc&limit=200`;
+        const ownRes = await fetch(ownUrl, { headers });
+        if (ownRes.ok) {
+          this.ownSessions = await ownRes.json();
+          console.log('[Metrics Dashboard] Loaded', this.ownSessions.length, 'own sessions from Supabase');
         }
       } catch (e) {
-        console.warn('[Metrics Dashboard] Could not load hub sessions:', e.message);
-        this.hubSessions = [];
+        console.warn('[Metrics Dashboard] Could not load own Supabase sessions:', e.message);
       }
-    } else {
-      this.hubSessions = [];
+
+      // Hub-wide sessions for PCT benchmark and hub breakdown table
+      if (this.hubCode) {
+        try {
+          const hubUrl = `${this.sbUrl}/rest/v1/captain_sessions`
+            + `?hub_code=eq.${encodeURIComponent(this.hubCode)}`
+            + `&select=email,process_name,pct,pause_count,error_count,completed_at`
+            + `&order=completed_at.desc&limit=500`;
+          const hubRes = await fetch(hubUrl, { headers });
+          if (hubRes.ok) {
+            this.hubSessions = await hubRes.json();
+            console.log('[Metrics Dashboard] Loaded', this.hubSessions.length, 'hub sessions from Supabase');
+          }
+        } catch (e) {
+          console.warn('[Metrics Dashboard] Could not load hub sessions:', e.message);
+        }
+      }
     }
+  }
+
+  /**
+   * Normalize Supabase session rows into the shape calculatePKRT/PCT/QFD/iPER expect.
+   * Supabase stores aggregated values (total_pkrt, pause_count) rather than pause arrays.
+   */
+  normalizeSupabaseSessions(rows) {
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    return rows
+      .filter(s => new Date(s.completed_at).getTime() >= thirtyDaysAgo)
+      .map(s => {
+        const pauseCount = s.pause_count || 0;
+        const avgPkrt    = pauseCount > 0 ? Math.floor((s.total_pkrt || 0) / pauseCount) : 0;
+        return {
+          session_id:   s.session_id,
+          process_name: s.process_name,
+          completed_at: new Date(s.completed_at).getTime(),
+          metrics: { pct: s.pct || 0, error_count: s.error_count || 0 },
+          // Recreate pause array so calculatePKRT and calculateQFD work unchanged
+          pauses: Array(pauseCount).fill(null).map(() => ({ pkrt: avgPkrt, resolution_method: null })),
+          errors: [],
+        };
+      });
   }
 
   /**
    * Calculate all metrics
    */
   calculateMetrics() {
-    if (this.sessionHistory.length === 0) {
+    // Prefer Supabase sessions (same source as admin panel) — fall back to localStorage
+    let sessions;
+    if (this.ownSessions && this.ownSessions.length > 0) {
+      sessions = this.normalizeSupabaseSessions(this.ownSessions);
+      console.log('[Metrics Dashboard] Using', sessions.length, 'Supabase sessions for metrics');
+    } else {
+      const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+      sessions = this.sessionHistory.filter(s => s.completed_at >= thirtyDaysAgo);
+      console.log('[Metrics Dashboard] Falling back to', sessions.length, 'localStorage sessions');
+    }
+
+    if (sessions.length === 0) {
       this.metrics = this.getEmptyMetrics();
       return;
     }
 
-    // Filter last 30 days
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-    const recentSessions = this.sessionHistory.filter(s => s.completed_at >= thirtyDaysAgo);
-
     this.metrics = {
-      pKRT: this.calculatePKRT(recentSessions),
-      PCT: this.calculatePCT(recentSessions),
-      QFD: this.calculateQFD(recentSessions),
-      iPER: this.calculateIPER(recentSessions),
-      totalSessions: recentSessions.length,
-      processBreakdown: this.getProcessBreakdown(recentSessions)
+      pKRT: this.calculatePKRT(sessions),
+      PCT: this.calculatePCT(sessions),
+      QFD: this.calculateQFD(sessions),
+      iPER: this.calculateIPER(sessions),
+      totalSessions: sessions.length,
+      processBreakdown: this.getProcessBreakdown(sessions)
     };
 
     console.log('[Metrics Dashboard] Calculated metrics:', this.metrics);
