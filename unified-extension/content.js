@@ -146,25 +146,30 @@ async function init() {
       const processes = response?.processes || [];
       console.log(`[Captain Timer] Fetched ${processes.length} processes from background`);
 
-      // Load sequence from chrome.storage.local (persistent across page reloads)
-      const seqKey = `captain_sequence_${currentUser.email}`;
-      const seqResult = await new Promise(r => chrome.storage.local.get([seqKey], r));
-      const savedSequence = seqResult[seqKey] || {};
+      // Load all persistent data from chrome.storage.local
+      const seqKey     = `captain_sequence_${currentUser.email}`;
+      const histKey    = `captain_session_history_${currentUser.email}`;
+      const storedData = await new Promise(r => chrome.storage.local.get([seqKey, histKey, 'captain_current_session'], r));
+      const savedSequence      = storedData[seqKey]                || {};
+      const savedHistory       = storedData[histKey]               || [];
+      const savedActiveSession = storedData.captain_current_session || null;
 
       window.postMessage({
-        type:        'INIT_CAPTAIN_TIMER',
-        email:       currentUser.email,
-        hub:         currentUser.hub     || null,
-        hubCode:     currentUser.hubCode || null,
-        supabaseUrl: typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.url      : '',
-        supabaseKey: typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.anon_key : '',
-        processes: processes,
-        sequence: savedSequence,
-        groqApiKey: typeof CHATBOT_CONFIG !== 'undefined' ? CHATBOT_CONFIG.api_key : '',
-        systemPrompt: typeof CHATBOT_CONFIG !== 'undefined' ? CHATBOT_CONFIG.system_prompt : ''
+        type:          'INIT_CAPTAIN_TIMER',
+        email:         currentUser.email,
+        hub:           currentUser.hub     || null,
+        hubCode:       currentUser.hubCode || null,
+        supabaseUrl:   typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.url      : '',
+        supabaseKey:   typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.anon_key : '',
+        processes:     processes,
+        sequence:      savedSequence,
+        history:       savedHistory,
+        activeSession: savedActiveSession,
+        groqApiKey:    typeof CHATBOT_CONFIG !== 'undefined' ? CHATBOT_CONFIG.api_key : '',
+        systemPrompt:  typeof CHATBOT_CONFIG !== 'undefined' ? CHATBOT_CONFIG.system_prompt : ''
       }, '*');
 
-      console.log('[Captain Timer] ✅ Init message sent with', Object.keys(savedSequence).length, 'saved sequences');
+      console.log('[Captain Timer] ✅ Init message sent with', Object.keys(savedSequence).length, 'sequences,', savedHistory.length, 'history sessions');
     });
   }
 }
@@ -177,6 +182,16 @@ window.addEventListener('message', async (event) => {
     const key = `captain_sequence_${event.data.email}`;
     chrome.storage.local.set({ [key]: event.data.data });
     console.log('[Sequence Bridge] Saved sequence for', event.data.email, '—', Object.keys(event.data.data).length, 'processes');
+  }
+
+  if (event.data.type === 'CAPTAIN_SAVE_HISTORY') {
+    const key = `captain_session_history_${event.data.email}`;
+    chrome.storage.local.set({ [key]: event.data.data });
+    console.log('[History Bridge] Saved', event.data.data.length, 'sessions for', event.data.email);
+  }
+
+  if (event.data.type === 'CAPTAIN_SAVE_CURRENT_SESSION') {
+    chrome.storage.local.set({ captain_current_session: event.data.data });
   }
 
   if (event.data.type === 'CAPTAIN_VIDEO_COMPLETE') {

@@ -53,7 +53,7 @@ class CaptainTimerSystem {
   /**
    * Initialize timer system for captain
    */
-  async init(userEmail, processes = [], sequenceData = {}, hubCode = null) {
+  async init(userEmail, processes = [], sequenceData = {}, hubCode = null, savedHistory = [], savedActiveSession = null) {
     this.userEmail = userEmail;
     this.hubCode   = hubCode || null;
 
@@ -69,6 +69,19 @@ class CaptainTimerSystem {
 
     // Load captain's personal sequence from chrome.storage.local data (passed via init message)
     this.loadPersonalSequenceFromData(sequenceData);
+
+    // Restore session history to localStorage if missing (e.g. new tab, cleared storage)
+    const historyKey = `captain_session_history_${userEmail}`;
+    if (!localStorage.getItem(historyKey) && savedHistory && savedHistory.length > 0) {
+      localStorage.setItem(historyKey, JSON.stringify(savedHistory));
+      console.log('[Captain Timer] Restored', savedHistory.length, 'sessions from chrome.storage');
+    }
+
+    // Restore active session to localStorage if missing
+    if (!localStorage.getItem('captain_current_session') && savedActiveSession && savedActiveSession.captain_email === userEmail) {
+      localStorage.setItem('captain_current_session', JSON.stringify(savedActiveSession));
+      console.log('[Captain Timer] Restored active session from chrome.storage:', savedActiveSession.process_name);
+    }
 
     // Check for existing active session
     await this.restoreActiveSession();
@@ -591,6 +604,13 @@ class CaptainTimerSystem {
       [historyKey]: history
     });
 
+    // Bridge to chrome.storage.local so history survives page reload / new tabs
+    window.postMessage({
+      type:  'CAPTAIN_SAVE_HISTORY',
+      email: this.userEmail,
+      data:  history
+    }, '*');
+
     console.log('[Captain Timer] 💾 Saved to history');
   }
 
@@ -652,6 +672,13 @@ class CaptainTimerSystem {
     await timerStorage.set({
       captain_current_session: this.currentSession
     });
+
+    // Bridge to chrome.storage.local so active session survives page reload
+    window.postMessage({
+      type:  'CAPTAIN_SAVE_CURRENT_SESSION',
+      email: this.userEmail,
+      data:  this.currentSession
+    }, '*');
   }
 
   /**
@@ -713,7 +740,14 @@ window.addEventListener('message', async (event) => {
       window.captainSystemPrompt = event.data.systemPrompt || '';
 
       // Init with email and processes from content script
-      await window.captainTimerSystem.init(event.data.email, event.data.processes || [], event.data.sequence || {}, event.data.hubCode || null);
+      await window.captainTimerSystem.init(
+        event.data.email,
+        event.data.processes || [],
+        event.data.sequence || {},
+        event.data.hubCode || null,
+        event.data.history || [],
+        event.data.activeSession || null
+      );
       
       // Initialize UI components
       if (window.processTimerTab) {
