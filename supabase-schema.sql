@@ -332,7 +332,136 @@ SELECT
   c.completed_at
 FROM sim_assignments a
 JOIN simulations s ON s.id = a.sim_id
-JOIN agent_profiles p ON p.hub = a.assigned_to AND p.role = 'Captain'
+JOIN agent_profiles p ON p.hub_code = a.assigned_to AND p.role = 'Captain'
 LEFT JOIN sim_completions c
   ON c.sim_id = a.sim_id AND c.email = p.email
 WHERE a.assign_type = 'hub';
+
+-- ================================================================
+-- PHASE 1 — HUB IDENTITY & DATA INTEGRITY
+-- Run these ALTER statements after the initial schema above.
+-- All ADD COLUMN IF NOT EXISTS / CREATE INDEX IF NOT EXISTS are safe
+-- to re-run on an existing database.
+-- ================================================================
+
+-- ── hubs table — single source of truth for all 12,000 hubs ────────────────
+-- Hub codes are provisioned by Valmo ops and given to hub managers.
+-- Format: {CITY_3}-{3_DIGIT_NUMBER}  e.g. MUM-042, DEL-117
+-- Captains enter this code on first login; the extension validates against this table.
+CREATE TABLE IF NOT EXISTS hubs (
+  hub_code      TEXT PRIMARY KEY,          -- e.g. 'MUM-042'
+  hub_name      TEXT NOT NULL,             -- e.g. 'Mumbai Hub 42'
+  city          TEXT,
+  region        TEXT,
+  manager_email TEXT,
+  active        BOOLEAN DEFAULT true,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE hubs DISABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_hubs_city   ON hubs(city);
+CREATE INDEX IF NOT EXISTS idx_hubs_region ON hubs(region);
+CREATE INDEX IF NOT EXISTS idx_hubs_active ON hubs(active) WHERE active = true;
+
+-- ── Add hub_code to agent_profiles ─────────────────────────────────────────
+-- hub (text) kept for backward compat; hub_code is the validated FK going forward
+ALTER TABLE agent_profiles ADD COLUMN IF NOT EXISTS hub_code TEXT REFERENCES hubs(hub_code);
+CREATE INDEX IF NOT EXISTS idx_profiles_hub_code ON agent_profiles(hub_code);
+
+-- ── Add hub_code to captain_sessions ───────────────────────────────────────
+-- Denormalized on every row so hub queries never need a join to agent_profiles
+ALTER TABLE captain_sessions ADD COLUMN IF NOT EXISTS hub_code TEXT REFERENCES hubs(hub_code);
+CREATE INDEX IF NOT EXISTS idx_sessions_hub_code    ON captain_sessions(hub_code);
+CREATE INDEX IF NOT EXISTS idx_sessions_hub_proc    ON captain_sessions(hub_code, process_name);
+CREATE INDEX IF NOT EXISTS idx_sessions_hub_date    ON captain_sessions(hub_code, completed_at DESC);
+
+-- ── Add hub_code to captain_pauses ─────────────────────────────────────────
+ALTER TABLE captain_pauses ADD COLUMN IF NOT EXISTS hub_code TEXT REFERENCES hubs(hub_code);
+CREATE INDEX IF NOT EXISTS idx_pauses_hub_code ON captain_pauses(hub_code);
+CREATE INDEX IF NOT EXISTS idx_pauses_hub_proc ON captain_pauses(hub_code, process_name);
+
+-- ── Add bucket column to captain_pauses (Phase 3 query bifurcation) ────────
+ALTER TABLE captain_pauses ADD COLUMN IF NOT EXISTS bucket TEXT;
+  -- Values: 'PROCESS_GAP' | 'POLICY_UNCLEAR' | 'SYSTEM_ISSUE' |
+  --         'CUSTOMER_COMPLEXITY' | 'REPETITIVE' | 'UNCLASSIFIED'
+CREATE INDEX IF NOT EXISTS idx_pauses_bucket ON captain_pauses(bucket);
+
+-- ── Add hub_code to sim_assignments ────────────────────────────────────────
+-- Going forward, hub-type assignments use hub_code (validated FK).
+-- assigned_to is kept for backward compat with existing rows.
+ALTER TABLE sim_assignments ADD COLUMN IF NOT EXISTS hub_code TEXT REFERENCES hubs(hub_code);
+CREATE INDEX IF NOT EXISTS idx_sim_assign_hub_code ON sim_assignments(hub_code);
+
+-- ── Update captain_pending_sims view to use hub_code ───────────────────────
+CREATE OR REPLACE VIEW captain_pending_sims AS
+SELECT
+  a.assigned_to   AS email,
+  a.sim_id,
+  s.title         AS sim_title,
+  s.process_name,
+  a.is_mandatory,
+  a.due_date,
+  c.completed_at  AS completed_at
+FROM sim_assignments a
+JOIN simulations s ON s.id = a.sim_id
+LEFT JOIN sim_completions c
+  ON c.sim_id = a.sim_id AND c.email = a.assigned_to
+WHERE a.assign_type = 'captain'
+UNION ALL
+-- Hub-level assignments: join on hub_code when available, fall back to hub name
+SELECT
+  p.email,
+  a.sim_id,
+  s.title,
+  s.process_name,
+  a.is_mandatory,
+  a.due_date,
+  c.completed_at
+FROM sim_assignments a
+JOIN simulations s ON s.id = a.sim_id
+JOIN agent_profiles p ON (
+  (a.hub_code IS NOT NULL AND p.hub_code = a.hub_code)
+  OR
+  (a.hub_code IS NULL AND p.hub = a.assigned_to)
+) AND p.role = 'Captain'
+LEFT JOIN sim_completions c
+  ON c.sim_id = a.sim_id AND c.email = p.email
+WHERE a.assign_type = 'hub';
+
+-- ── Hub performance view (Phase 4/5 foundation) ────────────────────────────
+CREATE OR REPLACE VIEW hub_performance AS
+SELECT
+  hub_code,
+  COUNT(*)                                        AS total_sessions,
+  ROUND(AVG(pct) / 60.0, 1)                      AS avg_pct_min,
+  ROUND(AVG(total_pkrt) / 60.0, 1)               AS avg_pkrt_min,
+  ROUND(AVG(pause_count), 2)                      AS avg_qfd,
+  ROUND(AVG(error_count), 3)                      AS avg_iper,
+  COUNT(DISTINCT email)                           AS active_captains,
+  COUNT(DISTINCT process_name)                    AS processes_tracked,
+  MAX(completed_at)                               AS last_session
+FROM captain_sessions
+WHERE completed_at > NOW() - INTERVAL '30 days'
+  AND hub_code IS NOT NULL
+GROUP BY hub_code;
+
+-- ── Hub + process breakdown view (trainer enforcement, Phase 5) ────────────
+CREATE OR REPLACE VIEW hub_process_weakness AS
+SELECT
+  hub_code,
+  process_name,
+  COUNT(*)                        AS sessions,
+  ROUND(AVG(pause_count), 2)      AS avg_qfd,
+  ROUND(AVG(error_count), 3)      AS avg_iper,
+  ROUND(AVG(pct) / 60.0, 1)      AS avg_pct_min,
+  COUNT(DISTINCT email)           AS captains_ran
+FROM captain_sessions
+WHERE completed_at > NOW() - INTERVAL '30 days'
+  AND hub_code IS NOT NULL
+GROUP BY hub_code, process_name
+ORDER BY avg_qfd DESC;
+
+-- ── Seed: sample hub for testing ───────────────────────────────────────────
+INSERT INTO hubs (hub_code, hub_name, city, region, active)
+VALUES ('TEST-001', 'Test Hub 1', 'Mumbai', 'West', true)
+ON CONFLICT (hub_code) DO NOTHING;

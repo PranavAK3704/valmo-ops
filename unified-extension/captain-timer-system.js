@@ -53,8 +53,9 @@ class CaptainTimerSystem {
   /**
    * Initialize timer system for captain
    */
-  async init(userEmail, processes = [], sequenceData = {}) {
+  async init(userEmail, processes = [], sequenceData = {}, hubCode = null) {
     this.userEmail = userEmail;
+    this.hubCode   = hubCode || null;
 
     console.log('[Captain Timer] Initializing for:', userEmail);
 
@@ -220,16 +221,17 @@ class CaptainTimerSystem {
     }
 
     const session = {
-      session_id: this.generateUUID(),
+      session_id:    this.generateUUID(),
       captain_email: this.userEmail,
-      process_name: processName,
-      start_time: Date.now(),
-      end_time: null,
-      pauses: [],
-      queries: [],
-      errors: [],
+      hub_code:      this.hubCode || null,
+      process_name:  processName,
+      start_time:    Date.now(),
+      end_time:      null,
+      pauses:        [],
+      queries:       [],
+      errors:        [],
       timer_running: true,
-      elapsed_time: 0 // in seconds
+      elapsed_time:  0
     };
 
     this.currentSession = session;
@@ -455,6 +457,7 @@ class CaptainTimerSystem {
       data: {
         session_id:   completedSession.session_id,
         email:        completedSession.captain_email,
+        hub_code:     completedSession.hub_code || null,
         process_name: completedSession.process_name,
         pct:          metrics.pct,
         total_pkrt:   metrics.total_pkrt,
@@ -463,7 +466,7 @@ class CaptainTimerSystem {
         error_count:  metrics.error_count,
         started_at:   new Date(completedSession.start_time).toISOString(),
         completed_at: new Date(completedSession.end_time).toISOString(),
-        pauses:       completedSession.pauses  // full pause objects for captain_pauses table
+        pauses:       completedSession.pauses
       }
     }, '*');
 
@@ -710,7 +713,7 @@ window.addEventListener('message', async (event) => {
       window.captainSystemPrompt = event.data.systemPrompt || '';
 
       // Init with email and processes from content script
-      await window.captainTimerSystem.init(event.data.email, event.data.processes || [], event.data.sequence || {});
+      await window.captainTimerSystem.init(event.data.email, event.data.processes || [], event.data.sequence || {}, event.data.hubCode || null);
       
       // Initialize UI components
       if (window.processTimerTab) {
@@ -718,7 +721,7 @@ window.addEventListener('message', async (event) => {
       }
       
       if (window.captainMetricsDashboard) {
-        await window.captainMetricsDashboard.init(event.data.email, event.data.hub, event.data.supabaseUrl, event.data.supabaseKey);
+        await window.captainMetricsDashboard.init(event.data.email, event.data.hub, event.data.supabaseUrl, event.data.supabaseKey, event.data.hubCode);
       }
       
       // Mark as ready

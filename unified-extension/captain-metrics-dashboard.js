@@ -40,9 +40,10 @@ class CaptainMetricsDashboard {
    * @param {string} supabaseUrl    — passed from content script
    * @param {string} supabaseKey    — passed from content script
    */
-  async init(userEmail, userHub, supabaseUrl, supabaseKey) {
+  async init(userEmail, userHub, supabaseUrl, supabaseKey, hubCode) {
     this.userEmail  = userEmail;
-    this.userHub    = userHub    || null;
+    this.userHub    = userHub     || null;
+    this.hubCode    = hubCode     || null;
     this.sbUrl      = supabaseUrl || '';
     this.sbKey      = supabaseKey || '';
     console.log('[Metrics Dashboard] Initializing for:', userEmail, '| hub:', this.userHub);
@@ -69,10 +70,10 @@ class CaptainMetricsDashboard {
     this.sessionHistory = result[historyKey] || [];
     console.log('[Metrics Dashboard] Loaded', this.sessionHistory.length, 'local sessions');
 
-    // Fetch hub-wide sessions from Supabase if hub is set
-    if (this.userHub && this.sbUrl && this.sbKey) {
+    // Fetch hub-wide sessions from Supabase — scoped to hub_code for efficiency
+    if (this.hubCode && this.sbUrl && this.sbKey) {
       try {
-        const url = `${this.sbUrl}/rest/v1/captain_sessions?select=email,process_name,pct,total_pkrt,pause_count,query_count,error_count,completed_at&order=completed_at.desc&limit=500`;
+        const url = `${this.sbUrl}/rest/v1/captain_sessions?hub_code=eq.${encodeURIComponent(this.hubCode)}&select=email,process_name,pct,total_pkrt,pause_count,query_count,error_count,completed_at&order=completed_at.desc&limit=500`;
         const res = await fetch(url, {
           headers: {
             apikey:        this.sbKey,

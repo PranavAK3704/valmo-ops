@@ -65,21 +65,26 @@ function detectPlatform() {
 async function init() {
   currentPlatform = detectPlatform();
   
-  const result = await chrome.storage.local.get(['userEmail', 'userRole', 'userHub']);
+  const result = await chrome.storage.local.get(['userEmail', 'userRole', 'userHub', 'userHubCode']);
 
   if (!result.userEmail) {
     console.log("[Valmo Ops] No user logged in");
     return;
   }
 
-  currentUser = { email: result.userEmail, role: result.userRole, hub: result.userHub || null };
+  currentUser = {
+    email:   result.userEmail,
+    role:    result.userRole,
+    hub:     result.userHub     || null,
+    hubCode: result.userHubCode || null
+  };
   console.log(`[Valmo Ops] ${currentUser.role} on ${currentPlatform}`);
 
   analytics.log('session_start', { role: currentUser.role, platform: currentPlatform });
 
   // Upsert agent profile in Supabase so the admin portal can see this user
   if (typeof supabaseSync !== 'undefined') {
-    supabaseSync.syncProfile(currentUser);
+    supabaseSync.syncProfile(currentUser); // passes email, role, hub, hubCode
   }
   
   if (shouldShowOverlay()) {
@@ -147,10 +152,11 @@ async function init() {
       const savedSequence = seqResult[seqKey] || {};
 
       window.postMessage({
-        type: 'INIT_CAPTAIN_TIMER',
-        email: currentUser.email,
-        hub: currentUser.hub || null,
-        supabaseUrl: typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.url : '',
+        type:        'INIT_CAPTAIN_TIMER',
+        email:       currentUser.email,
+        hub:         currentUser.hub     || null,
+        hubCode:     currentUser.hubCode || null,
+        supabaseUrl: typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.url      : '',
         supabaseKey: typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.anon_key : '',
         processes: processes,
         sequence: savedSequence,

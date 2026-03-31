@@ -115,6 +115,20 @@
       border-radius: 4px;
       font-size: 10px;
     }
+    .hub-feedback {
+      display: none;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .hub-feedback.show { display: block; }
+    .hub-feedback.ok   { background: rgba(76, 175, 80, 0.35); }
+    .hub-feedback.err  { background: rgba(244, 67, 54, 0.35); }
+    .hub-feedback.wait { background: rgba(255,255,255,0.15); }
+    input#hubCodeInput  { text-transform: uppercase; letter-spacing: 1px; }
   </style>
 </head>
 <body>
@@ -128,30 +142,22 @@
       <input
         type="email"
         id="emailInput"
-        placeholder="Enter your email address"
+        placeholder="Work email address"
         autocomplete="email"
       />
-      <select id="hubSelect" style="display:none; width:100%; padding:13px 15px; border:none; border-radius:10px; font-size:14px; background:rgba(255,255,255,0.97); color:#333; margin-bottom:14px; font-family:inherit; cursor:pointer;">
-        <option value="">— Select your hub —</option>
-        <option value="Mumbai">Mumbai</option>
-        <option value="Delhi">Delhi</option>
-        <option value="Bengaluru">Bengaluru</option>
-        <option value="Hyderabad">Hyderabad</option>
-        <option value="Chennai">Chennai</option>
-        <option value="Kolkata">Kolkata</option>
-        <option value="Pune">Pune</option>
-        <option value="Ahmedabad">Ahmedabad</option>
-        <option value="Jaipur">Jaipur</option>
-        <option value="Lucknow">Lucknow</option>
-        <option value="Surat">Surat</option>
-        <option value="Other">Other</option>
-      </select>
+      <input
+        type="text"
+        id="hubCodeInput"
+        placeholder="Hub code (e.g. MUM-042)"
+        maxlength="10"
+        autocomplete="off"
+        style="display:none;"
+      />
+      <div id="hubFeedback" class="hub-feedback"></div>
       <button class="btn-primary" id="loginBtn">Login</button>
       <div class="hint">
-        <strong>Test Accounts:</strong><br>
-        <code>name_technotask@meesho.com</code> → L1 Agent<br>
-        <code>captain@gmail.com</code> → Captain<br>
-        <code>manager@meesho.com</code> → SC Manager
+        Hub code is provided by your hub manager.<br>
+        <code>captain@gmail.com</code> → use <code>TEST-001</code>
       </div>
     </div>
     
