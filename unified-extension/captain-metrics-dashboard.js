@@ -233,64 +233,41 @@ class CaptainMetricsDashboard {
 
   /**
    * Calculate QFD (Query Frequency Decay)
+   * Formula: avg pauses per session. Lower = better.
+   * Trend: compare first-half sessions vs second-half sessions.
    */
   calculateQFD(sessions) {
-    // Group by process
-    const byProcess = {};
+    if (sessions.length === 0) {
+      return { average: 0, trend: 'stable', trendDelta: 0, totalSessions: 0 };
+    }
 
-    sessions.forEach(s => {
-      if (!byProcess[s.process_name]) {
-        byProcess[s.process_name] = [];
-      }
-      byProcess[s.process_name].push({
-        date: s.completed_at,
-        queries: s.queries?.length || 0
-      });
-    });
+    const totalPauses = sessions.reduce((sum, s) => sum + (s.pauses?.length || 0), 0);
+    const average = +(totalPauses / sessions.length).toFixed(1);
 
-    // Calculate decay slope for each process
-    const decayData = {};
+    // Trend: sort by time, compare oldest half vs newest half
+    const sorted = [...sessions].sort((a, b) => a.completed_at - b.completed_at);
+    const mid = Math.max(1, Math.floor(sorted.length / 2));
+    const oldHalf = sorted.slice(0, mid);
+    const newHalf = sorted.slice(mid);
 
-    Object.keys(byProcess).forEach(proc => {
-      const data = byProcess[proc].sort((a, b) => a.date - b.date);
-      
-      if (data.length < 2) {
-        decayData[proc] = {
-          slope: 0,
-          status: 'insufficient_data'
-        };
-        return;
-      }
+    const oldAvg = oldHalf.reduce((s, x) => s + (x.pauses?.length || 0), 0) / oldHalf.length;
+    const newAvg = newHalf.length > 0
+      ? newHalf.reduce((s, x) => s + (x.pauses?.length || 0), 0) / newHalf.length
+      : oldAvg;
 
-      // Simple linear regression
-      const n = data.length;
-      const sumX = data.reduce((sum, _d, i) => sum + i, 0);
-      const sumY = data.reduce((sum, d) => sum + d.queries, 0);
-      const sumXY = data.reduce((sum, d, i) => sum + (i * d.queries), 0);
-      const sumXX = data.reduce((sum, _d, i) => sum + (i * i), 0);
+    const delta = +(newAvg - oldAvg).toFixed(1);
+    let trend = 'stable';
+    if (delta < -0.3) trend = 'improving'; // fewer pauses recently
+    if (delta > 0.3)  trend = 'worsening'; // more pauses recently
 
-      const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-
-      // Determine status
-      let status = 'stable';
-      if (slope < -0.5) status = 'improving'; // Queries decreasing
-      if (slope > 0.5) status = 'worsening'; // Queries increasing
-
-      decayData[proc] = {
-        slope: slope,
-        status: status,
-        dataPoints: data.length
-      };
-    });
-
-    return {
-      byProcess: decayData,
-      totalProcesses: Object.keys(byProcess).length
-    };
+    return { average, trend, trendDelta: delta, totalSessions: sessions.length };
   }
 
   /**
    * Calculate iPER (In-Process Error Rate)
+   * Formula: total errors / total sessions. Lower = better.
+   * Reads s.metrics.error_count (stored at session completion) with
+   * fallback to s.errors.length for older session objects.
    */
   calculateIPER(sessions) {
     if (sessions.length === 0) {
@@ -302,7 +279,7 @@ class CaptainMetricsDashboard {
       };
     }
 
-    const totalErrors = sessions.reduce((sum, s) => sum + (s.errors?.length || 0), 0);
+    const totalErrors = sessions.reduce((sum, s) => sum + (s.metrics?.error_count ?? s.errors?.length ?? 0), 0);
     const avgErrors = totalErrors / sessions.length;
 
     // Trend
@@ -393,7 +370,7 @@ class CaptainMetricsDashboard {
       b.totalPauses += (s.pauses?.length || 0);
       b.totalPKRT   += (s.pauses || []).reduce((sum, p) => sum + (p.pkrt || 0), 0);
       b.totalQueries+= (s.queries?.length || 0);
-      b.totalErrors += (s.errors?.length || 0);
+      b.totalErrors += (s.metrics?.error_count ?? s.errors?.length ?? 0);
     });
 
     return breakdown;
@@ -406,7 +383,7 @@ class CaptainMetricsDashboard {
     return {
       pKRT: { average: 0, total: 0, count: 0, trend: [], byResolution: {} },
       PCT: { average: 0, benchmark: 0, delta: 0, trend: [], byProcess: {} },
-      QFD: { byProcess: {}, totalProcesses: 0 },
+      QFD: { average: 0, trend: 'stable', trendDelta: 0, totalSessions: 0 },
       iPER: { average: 0, total: 0, trend: [], byProcess: {} },
       totalSessions: 0,
       processBreakdown: {}
@@ -599,7 +576,9 @@ class CaptainMetricsDashboard {
    */
   getQFDCard() {
     const qfd = this.metrics.QFD;
-    const improving = Object.values(qfd.byProcess).filter(p => p.status === 'improving').length;
+    const trendIcon  = qfd.trend === 'improving' ? '↓' : qfd.trend === 'worsening' ? '↑' : '→';
+    const trendColor = qfd.trend === 'improving' ? '#22c55e' : qfd.trend === 'worsening' ? '#ef4444' : '#6b7280';
+    const trendLabel = qfd.trend === 'improving' ? 'Improving' : qfd.trend === 'worsening' ? 'Worsening' : 'Stable';
 
     return `
       <div class="metrics-card">
@@ -607,10 +586,10 @@ class CaptainMetricsDashboard {
           <span class="metrics-card-icon">📉</span>
           <span class="metrics-card-title">QFD</span>
         </div>
-        <div class="metrics-card-value">${improving}</div>
-        <div class="metrics-card-label">Processes Improving</div>
-        <div class="metrics-card-detail">
-          of ${qfd.totalProcesses} tracked
+        <div class="metrics-card-value">${qfd.average}</div>
+        <div class="metrics-card-label">Avg Queries/Session</div>
+        <div class="metrics-card-detail" style="color:${trendColor};font-weight:600;">
+          ${trendIcon} ${trendLabel}
         </div>
       </div>
     `;
