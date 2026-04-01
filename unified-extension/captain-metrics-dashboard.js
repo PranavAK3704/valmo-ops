@@ -361,7 +361,7 @@ class CaptainMetricsDashboard {
     let sessionScores;
     if (hasBucketData) {
       sessionScores = sessions.map(s =>
-        bucketScoreBySession[s.session_id] ?? (s.metrics?.error_count ?? 0) > 0 ? 0.5 : 0
+        bucketScoreBySession[s.session_id] ?? ((s.metrics?.error_count ?? 0) > 0 ? 0.5 : 0)
       );
     } else {
       // Fallback: raw error_count until classifier has run at least once

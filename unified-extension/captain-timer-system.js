@@ -233,6 +233,12 @@ class CaptainTimerSystem {
    * Start a process
    */
   async startProcess(processName) {
+    if (!this.hubCode) {
+      this._showToast('⚠️ No hub code set. Log out and log back in — your hub code must be configured before tracking processes.', '#ef4444');
+      console.warn('[Captain Timer] startProcess blocked — no hub_code set');
+      return false;
+    }
+
     if (this.currentSession) {
       console.warn('[Captain Timer] Already tracking a process');
       return false;
@@ -684,6 +690,21 @@ class CaptainTimerSystem {
       email: this.userEmail,
       data:  this.currentSession
     }, '*');
+  }
+
+  /**
+   * Show a brief toast notification inside the page
+   */
+  _showToast(message, color = '#1a1a2e') {
+    const id = 'captain-timer-toast';
+    const existing = document.getElementById(id);
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = id;
+    toast.style.cssText = `position:fixed;bottom:88px;right:20px;background:${color};color:#fff;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;z-index:2147483647;max-width:300px;box-shadow:0 4px 16px rgba(0,0,0,0.3);line-height:1.4`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 6000);
   }
 
   /**
