@@ -640,7 +640,10 @@ class CaptainMetricsDashboard {
    */
   getPCTCard() {
     const pct = this.metrics.PCT;
-    const minutes = Math.floor(pct.average / 60);
+    const avg = Math.round(pct.average);
+    const pctDisplay = avg >= 60
+      ? `${Math.floor(avg / 60)}:${(avg % 60).toString().padStart(2, '0')}`
+      : `${avg}s`;
     const deltaClass = pct.delta < 0 ? 'positive' : 'negative';
     const deltaSign = pct.delta < 0 ? '' : '+';
 
@@ -650,7 +653,7 @@ class CaptainMetricsDashboard {
           <span class="metrics-card-icon">⏲️</span>
           <span class="metrics-card-title">PCT</span>
         </div>
-        <div class="metrics-card-value">${minutes} min</div>
+        <div class="metrics-card-value">${pctDisplay}</div>
         <div class="metrics-card-label">Avg Cycle Time</div>
         <div class="metrics-card-detail ${pct.benchmark > 0 ? deltaClass : ''}">
           ${pct.benchmark > 0 ? `${deltaSign}${pct.deltaPercent}% vs fleet` : 'No fleet data yet'}
