@@ -47,15 +47,27 @@ class CaptainTimerSystem {
     this.allProcesses = [];
     this.processFrequency = {}; // { processName: { count, lastUsed } } — decay-scored
     this.userEmail = null;
+    this.hubType = 'LM';           // 'FM' | 'LM'
+    this.sessionRole = 'captain';  // 'captain' | 'operator'
+    this.expectedOperators = 1;
+    this.hubProcessId = null;      // set when FM Captain starts or Operator joins
+    this.hubPollInterval = null;   // polls hub_process_executions for FM Captain
+    this.sbUrl = '';
+    this.sbKey = '';
     this.initialized = false;
   }
 
   /**
    * Initialize timer system for captain
    */
-  async init(userEmail, processes = [], sequenceData = {}, hubCode = null, savedHistory = [], savedActiveSession = null) {
-    this.userEmail = userEmail;
-    this.hubCode   = hubCode || null;
+  async init(userEmail, processes = [], sequenceData = {}, hubCode = null, savedHistory = [], savedActiveSession = null, hubType = 'LM', sessionRole = 'captain', expectedOperators = 1, sbUrl = '', sbKey = '') {
+    this.userEmail         = userEmail;
+    this.hubCode           = hubCode           || null;
+    this.hubType           = hubType           || 'LM';
+    this.sessionRole       = sessionRole       || 'captain';
+    this.expectedOperators = expectedOperators || 1;
+    this.sbUrl             = sbUrl             || '';
+    this.sbKey             = sbKey             || '';
 
     console.log('[Captain Timer] Initializing for:', userEmail);
 
@@ -176,6 +188,16 @@ class CaptainTimerSystem {
       await timerStorage.set({ captain_current_session: session });
 
       this.currentSession = session;
+
+      // Restore hub process ID and restart completion poll for FM Captain
+      if (session.hub_process_id) {
+        this.hubProcessId = session.hub_process_id;
+        if (this.hubType === 'FM' && this.sessionRole === 'captain') {
+          this._startHubCompletionPolling();
+          console.log('[Captain Timer] Restarted hub completion poll after refresh');
+        }
+      }
+
       console.log('[Captain Timer] Restored session (paused on refresh):', this.currentSession.process_name);
     }
   }
@@ -239,9 +261,25 @@ class CaptainTimerSystem {
       return false;
     }
 
+    if (this.sessionRole === 'operator') {
+      this._showToast('⚠️ Operators use "Join Active Process" — you cannot start a process directly.', '#ef4444');
+      console.warn('[Captain Timer] startProcess blocked — operator must use joinProcess()');
+      return false;
+    }
+
     if (this.currentSession) {
       console.warn('[Captain Timer] Already tracking a process');
       return false;
+    }
+
+    // For FM Captain: create a hub process execution in Supabase
+    let hubProcessId = null;
+    if (this.hubType === 'FM' && this.sessionRole === 'captain') {
+      hubProcessId = await this._createHubExecution(processName);
+      if (!hubProcessId) {
+        this._showToast('⚠️ Could not create hub process. Check your connection and try again.', '#ef4444');
+        return false;
+      }
     }
 
     const session = {
@@ -249,6 +287,8 @@ class CaptainTimerSystem {
       captain_email: this.userEmail,
       hub_code:      this.hubCode || null,
       process_name:  processName,
+      hub_process_id: hubProcessId,
+      session_role:  this.sessionRole,
       start_time:    Date.now(),
       end_time:      null,
       pauses:        [],
@@ -259,6 +299,7 @@ class CaptainTimerSystem {
     };
 
     this.currentSession = session;
+    if (hubProcessId) this.hubProcessId = hubProcessId;
     await this.saveCurrentSession();
 
     // Update sequence
@@ -266,6 +307,11 @@ class CaptainTimerSystem {
 
     // Start timer
     this.startTimer();
+
+    // FM Captain polls every 15s for operator completion
+    if (this.hubType === 'FM' && this.sessionRole === 'captain' && hubProcessId) {
+      this._startHubCompletionPolling();
+    }
 
     // Log analytics
     if (typeof analytics !== 'undefined') {
@@ -475,24 +521,38 @@ class CaptainTimerSystem {
     // Clear storage
     await timerStorage.remove(['captain_current_session']);
 
+    // Clear FM Captain poll (manual stop or LM hub)
+    if (this.hubPollInterval) {
+      clearInterval(this.hubPollInterval);
+      this.hubPollInterval = null;
+    }
+
     // Sync completed session + per-pause detail to Supabase via content script bridge
     window.postMessage({
       type: 'SUPABASE_CAPTAIN_SESSION',
       data: {
-        session_id:   completedSession.session_id,
-        email:        completedSession.captain_email,
-        hub_code:     completedSession.hub_code || null,
-        process_name: completedSession.process_name,
-        pct:          metrics.pct,
-        total_pkrt:   metrics.total_pkrt,
-        pause_count:  metrics.pause_count,
-        query_count:  metrics.query_count,
-        error_count:  metrics.error_count,
-        started_at:   new Date(completedSession.start_time).toISOString(),
-        completed_at: new Date(completedSession.end_time).toISOString(),
-        pauses:       completedSession.pauses
+        session_id:     completedSession.session_id,
+        email:          completedSession.captain_email,
+        hub_code:       completedSession.hub_code      || null,
+        hub_process_id: completedSession.hub_process_id || null,
+        session_role:   completedSession.session_role   || 'captain',
+        process_name:   completedSession.process_name,
+        pct:            metrics.pct,
+        total_pkrt:     metrics.total_pkrt,
+        pause_count:    metrics.pause_count,
+        query_count:    metrics.query_count,
+        error_count:    metrics.error_count,
+        started_at:     new Date(completedSession.start_time).toISOString(),
+        completed_at:   new Date(completedSession.end_time).toISOString(),
+        pauses:         completedSession.pauses
       }
     }, '*');
+
+    // FM Operator: notify hub after the session write has been dispatched
+    // Fire-and-forget — hub notification is best-effort, never blocks UI
+    if (this.hubType === 'FM' && this.sessionRole === 'operator' && this.hubProcessId) {
+      this._notifyOperatorDone(metrics.pct);
+    }
 
     // Show next process notification
     this.showNextProcessNotification();
@@ -707,6 +767,258 @@ class CaptainTimerSystem {
     setTimeout(() => toast.remove(), 6000);
   }
 
+  // ─── Hub Process Execution (FM hubs) ─────────────────────────────────────────
+
+  /**
+   * FM Operator: find the active hub process for this hub and join it.
+   * Sets hub_process_id on the new session.
+   */
+  async joinProcess() {
+    if (!this.hubCode) {
+      this._showToast('⚠️ No hub code set. Log out and log back in.', '#ef4444');
+      return false;
+    }
+    if (this.currentSession) {
+      this._showToast('You already have an active process running.', '#888');
+      return false;
+    }
+
+    const execution = await this._fetchActiveHubExecution();
+    if (!execution) {
+      this._showToast('No active process found for your hub. Wait for the Captain to start one.', '#888');
+      return false;
+    }
+
+    const session = {
+      session_id:     this.generateUUID(),
+      captain_email:  this.userEmail,
+      hub_code:       this.hubCode || null,
+      process_name:   execution.process_name,
+      hub_process_id: execution.id,
+      session_role:   'operator',
+      start_time:     Date.now(),
+      end_time:       null,
+      pauses:         [],
+      queries:        [],
+      errors:         [],
+      timer_running:  true,
+      elapsed_time:   0
+    };
+
+    this.currentSession = session;
+    this.hubProcessId   = execution.id;
+    await this.saveCurrentSession();
+    await this.updateSequence(execution.process_name);
+    this.startTimer();
+
+    this._showToast(`Joined: ${execution.process_name}`, '#22c55e');
+    console.log('[Captain Timer] Operator joined hub process:', execution.process_name, execution.id);
+    return true;
+  }
+
+  /**
+   * FM Captain: auto-complete hub process using aggregated PCT from operators.
+   * Called by the completion poll when all operators are done.
+   */
+  async autoCompleteHubProcess(aggregated_pct) {
+    if (!this.currentSession || this.sessionRole !== 'captain') return;
+
+    console.log('[Captain Timer] Auto-completing hub process. Aggregated PCT:', aggregated_pct);
+
+    if (this.hubPollInterval) {
+      clearInterval(this.hubPollInterval);
+      this.hubPollInterval = null;
+    }
+
+    this.stopTimer();
+    this.currentSession.end_time      = Date.now();
+    this.currentSession.timer_running = false;
+
+    const metrics = this.calculateSessionMetrics();
+    if (aggregated_pct && aggregated_pct > 0) metrics.pct = aggregated_pct;
+
+    await this.saveToHistory(metrics);
+
+    const completedSession = this.currentSession;
+    this.currentSession    = null;
+    this.hubProcessId      = null;
+    await timerStorage.remove(['captain_current_session']);
+
+    window.postMessage({
+      type: 'SUPABASE_CAPTAIN_SESSION',
+      data: {
+        session_id:     completedSession.session_id,
+        email:          completedSession.captain_email,
+        hub_code:       completedSession.hub_code       || null,
+        hub_process_id: completedSession.hub_process_id || null,
+        session_role:   'captain',
+        process_name:   completedSession.process_name,
+        pct:            metrics.pct,
+        total_pkrt:     metrics.total_pkrt,
+        pause_count:    metrics.pause_count,
+        query_count:    metrics.query_count,
+        error_count:    metrics.error_count,
+        started_at:     new Date(completedSession.start_time).toISOString(),
+        completed_at:   new Date(completedSession.end_time).toISOString(),
+        pauses:         completedSession.pauses
+      }
+    }, '*');
+
+    this._showToast('All operators done — hub process complete!', '#22c55e');
+    this.showNextProcessNotification();
+
+    if (window.processTimerTab) window.processTimerTab.updateUI();
+  }
+
+  /**
+   * FM Captain: create a hub_process_executions row in Supabase.
+   * Returns the new row's UUID, or null on failure.
+   */
+  async _createHubExecution(processName) {
+    if (!this.sbUrl || !this.sbKey) return null;
+    try {
+      const res = await fetch(`${this.sbUrl}/rest/v1/hub_process_executions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'apikey':        this.sbKey,
+          'Authorization': `Bearer ${this.sbKey}`,
+          'Prefer':        'return=representation'
+        },
+        body: JSON.stringify({
+          hub_code:           this.hubCode,
+          process_name:       processName,
+          captain_email:      this.userEmail,
+          expected_operators: this.expectedOperators,
+          started_at:         new Date().toISOString()
+        })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      const rows = await res.json();
+      return rows[0]?.id || null;
+    } catch (e) {
+      console.error('[Captain Timer] _createHubExecution error:', e.message);
+      return null;
+    }
+  }
+
+  /**
+   * FM Operator: fetch the most recent uncompleted hub execution for this hub.
+   */
+  async _fetchActiveHubExecution() {
+    if (!this.sbUrl || !this.sbKey || !this.hubCode) return null;
+    try {
+      const url = `${this.sbUrl}/rest/v1/hub_process_executions?hub_code=eq.${encodeURIComponent(this.hubCode)}&completed_at=is.null&order=started_at.desc&limit=1`;
+      const res = await fetch(url, {
+        headers: { 'apikey': this.sbKey, 'Authorization': `Bearer ${this.sbKey}` }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const rows = await res.json();
+      return rows[0] || null;
+    } catch (e) {
+      console.error('[Captain Timer] _fetchActiveHubExecution error:', e.message);
+      return null;
+    }
+  }
+
+  /**
+   * FM Captain: poll for completion every 15s.
+   * Stops and auto-completes when aggregated_pct is written (all operators done).
+   */
+  _startHubCompletionPolling() {
+    if (this.hubPollInterval) clearInterval(this.hubPollInterval);
+    this.hubPollInterval = setInterval(async () => {
+      if (!this.hubProcessId || !this.currentSession || this.sessionRole !== 'captain') {
+        clearInterval(this.hubPollInterval);
+        this.hubPollInterval = null;
+        return;
+      }
+      try {
+        const url = `${this.sbUrl}/rest/v1/hub_process_executions?id=eq.${this.hubProcessId}&select=aggregated_pct,operators_done,expected_operators`;
+        const res = await fetch(url, {
+          headers: { 'apikey': this.sbKey, 'Authorization': `Bearer ${this.sbKey}` }
+        });
+        if (!res.ok) return;
+        const rows = await res.json();
+        const exec = rows[0];
+        if (exec && exec.aggregated_pct != null) {
+          clearInterval(this.hubPollInterval);
+          this.hubPollInterval = null;
+          await this.autoCompleteHubProcess(exec.aggregated_pct);
+        }
+      } catch (e) {
+        console.warn('[Captain Timer] Hub poll error:', e.message);
+      }
+    }, 15000);
+    console.log('[Captain Timer] Started hub completion polling for', this.hubProcessId);
+  }
+
+  /**
+   * FM Operator: increment operators_done on the hub execution.
+   * If this is the last operator, compute geometric mean PCT and write aggregated_pct.
+   */
+  async _notifyOperatorDone(myPct) {
+    if (!this.hubProcessId || !this.sbUrl || !this.sbKey) return;
+    try {
+      // Fetch current execution state
+      const fetchRes = await fetch(
+        `${this.sbUrl}/rest/v1/hub_process_executions?id=eq.${this.hubProcessId}&select=operators_done,expected_operators,projected_volume`,
+        { headers: { 'apikey': this.sbKey, 'Authorization': `Bearer ${this.sbKey}` } }
+      );
+      const rows = await fetchRes.json();
+      if (!rows[0]) return;
+
+      const newDone = rows[0].operators_done + 1;
+      const isLast  = newDone >= rows[0].expected_operators;
+
+      const patchData = { operators_done: newDone };
+
+      if (isLast) {
+        // Allow 1.5s for this operator's session to finish writing to Supabase
+        await new Promise(r => setTimeout(r, 1500));
+
+        // Fetch all other operator PCTs for this hub process
+        const sessRes = await fetch(
+          `${this.sbUrl}/rest/v1/captain_sessions?hub_process_id=eq.${this.hubProcessId}&session_role=eq.operator&select=pct`,
+          { headers: { 'apikey': this.sbKey, 'Authorization': `Bearer ${this.sbKey}` } }
+        );
+        const sessions = await sessRes.json();
+
+        // Combine saved PCTs with current operator's PCT (guards against write lag)
+        const savedPcts = (sessions || []).map(s => s.pct).filter(p => p > 0);
+        const allPcts   = savedPcts.includes(myPct) ? savedPcts : [...savedPcts, myPct];
+
+        if (allPcts.length > 0) {
+          const projVol = rows[0].projected_volume;
+          let aggregated_pct;
+          if (projVol && projVol > 0) {
+            // Path A: volume-normalized (Σ operator times / total projected volume)
+            aggregated_pct = Math.round(allPcts.reduce((a, b) => a + b, 0) / projVol);
+          } else {
+            // Path B: geometric mean (volume-robust, no extra data needed)
+            aggregated_pct = Math.round(Math.exp(allPcts.reduce((s, t) => s + Math.log(t), 0) / allPcts.length));
+          }
+          patchData.aggregated_pct = aggregated_pct;
+          patchData.completed_at   = new Date().toISOString();
+          console.log('[Captain Timer] Hub process complete. PCTs:', allPcts, '→ aggregated_pct:', aggregated_pct, projVol ? `(Path A, vol=${projVol})` : '(Path B, geometric mean)');
+        }
+      }
+
+      await fetch(
+        `${this.sbUrl}/rest/v1/hub_process_executions?id=eq.${this.hubProcessId}`,
+        {
+          method:  'PATCH',
+          headers: { 'Content-Type': 'application/json', 'apikey': this.sbKey, 'Authorization': `Bearer ${this.sbKey}`, 'Prefer': 'return=minimal' },
+          body:    JSON.stringify(patchData)
+        }
+      );
+    } catch (e) {
+      console.error('[Captain Timer] _notifyOperatorDone error:', e.message);
+    }
+  }
+
+  // ─── end hub methods ─────────────────────────────────────────────────────────
+
   /**
    * Generate UUID
    */
@@ -768,11 +1080,16 @@ window.addEventListener('message', async (event) => {
       // Init with email and processes from content script
       await window.captainTimerSystem.init(
         event.data.email,
-        event.data.processes || [],
-        event.data.sequence || {},
-        event.data.hubCode || null,
-        event.data.history || [],
-        event.data.activeSession || null
+        event.data.processes     || [],
+        event.data.sequence      || {},
+        event.data.hubCode       || null,
+        event.data.history       || [],
+        event.data.activeSession || null,
+        event.data.hubType           || 'LM',
+        event.data.sessionRole       || 'captain',
+        event.data.expectedOperators || 1,
+        event.data.supabaseUrl       || '',
+        event.data.supabaseKey       || ''
       );
       
       // Initialize UI components
@@ -780,7 +1097,8 @@ window.addEventListener('message', async (event) => {
         await window.processTimerTab.init();
       }
       
-      if (window.captainMetricsDashboard) {
+      // Metrics dashboard is Captain-only — Operators don't track their own metrics
+      if (window.captainMetricsDashboard && event.data.sessionRole !== 'operator') {
         await window.captainMetricsDashboard.init(event.data.email, event.data.hub, event.data.supabaseUrl, event.data.supabaseKey, event.data.hubCode);
       }
       

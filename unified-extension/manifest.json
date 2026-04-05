@@ -1,7 +1,7 @@
 {
   "name": "Valmo Ops Assistant",
   "description": "Unified ops support with AI-powered chatbot. Auto-syncs from Google Sheets.",
-  "version": "1.0",
+  "version": "1.0.0",
   "manifest_version": 3,
 
   "icons": {
@@ -34,8 +34,7 @@
     {
       "matches": [
         "https://console.valmo.in/*",
-        "https://*.kapturecrm.com/*",
-        "http://localhost:3000/*"
+        "https://*.kapturecrm.com/*"
       ],
       "css": [
         "styles/unified.css",
@@ -46,7 +45,8 @@
         "styles/captain-pause-modal.css",
         "styles/captain-metrics-dashboard.css",
         "gamification/my-stats-tab.css",
-        "tat-system/tat-dashboard.css"
+        "tat-system/tat-dashboard.css",
+        "training-styles.css"
       ],
       "js": [
         "config.js",
@@ -63,6 +63,7 @@
         "tat-system/art-metrics-ui.js",
         "smart-chatbot.js",
         "content.js",
+        "training-engine.js",
         "process-pulse-enhanced.js"
       ],
       "run_at": "document_idle"

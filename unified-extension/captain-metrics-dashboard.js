@@ -522,6 +522,9 @@ class CaptainMetricsDashboard {
    * Inject tab button
    */
   injectTabButton() {
+    // Operators only watch videos — metrics are Captain-only
+    if (window.captainTimerSystem?.sessionRole === 'operator') return;
+
     const nav = document.querySelector('.valmo-nav');
     if (!nav) return;
 

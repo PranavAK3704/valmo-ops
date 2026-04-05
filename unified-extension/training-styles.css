@@ -1,0 +1,542 @@
+/* ─── Training Engine Styles ─────────────────────────────────────────────── */
+
+/* Pulse animation for spotlight ring */
+@keyframes vt-pulse {
+  0%   { box-shadow: 0 0 0 2px rgba(244, 51, 151, 0.3), 0 0 12px rgba(244, 51, 151, 0.4); }
+  50%  { box-shadow: 0 0 0 6px rgba(244, 51, 151, 0.1), 0 0 24px rgba(244, 51, 151, 0.6); }
+  100% { box-shadow: 0 0 0 2px rgba(244, 51, 151, 0.3), 0 0 12px rgba(244, 51, 151, 0.4); }
+}
+
+/* ─── Launcher button ──────────────────────────────────────────────────────── */
+#vt-launcher {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  z-index: 2147483600;
+  background: linear-gradient(135deg, #9747FF, #F43397);
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(151, 71, 255, 0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+#vt-launcher:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(151, 71, 255, 0.55);
+}
+
+#vt-launcher:active {
+  transform: translateY(0);
+}
+
+/* ─── Search modal ─────────────────────────────────────────────────────────── */
+#vt-search-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483640;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.vt-search-box {
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  width: 520px;
+  max-width: calc(100vw - 40px);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+
+.vt-search-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vt-search-title {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+#vt-search-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+#vt-search-close:hover {
+  background: rgba(244, 51, 151, 0.2);
+  color: #F43397;
+}
+
+#vt-search-input {
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 14px;
+  padding: 14px 20px;
+  outline: none;
+  font-family: inherit;
+}
+
+#vt-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.vt-search-results {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px;
+}
+
+.vt-search-results::-webkit-scrollbar {
+  width: 5px;
+}
+
+.vt-search-results::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vt-search-results::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.vt-search-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+}
+
+.vt-search-error {
+  color: #F43397;
+}
+
+.vt-search-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+  transition: background 0.15s;
+  cursor: default;
+}
+
+.vt-search-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.vt-sim-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.vt-sim-title {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vt-sim-meta {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vt-start-btn {
+  background: linear-gradient(135deg, #9747FF, #F43397);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s, transform 0.1s;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.vt-start-btn:hover {
+  opacity: 0.9;
+  transform: scale(1.03);
+}
+
+/* ─── Navigation banner ────────────────────────────────────────────────────── */
+#vt-nav-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2147483630;
+  background: linear-gradient(90deg, #1a1a2e, #2d1b4e);
+  border-bottom: 2px solid #9747FF;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+#vt-nav-banner span {
+  flex: 1;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+#vt-nav-banner strong {
+  color: #9747FF;
+  font-weight: 600;
+}
+
+#vt-nav-skip {
+  background: rgba(151, 71, 255, 0.2);
+  border: 1px solid rgba(151, 71, 255, 0.5);
+  color: #9747FF;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+#vt-nav-skip:hover {
+  background: rgba(151, 71, 255, 0.35);
+}
+
+/* ─── Instruction card ─────────────────────────────────────────────────────── */
+#vt-instruction-card {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483625;
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  width: 420px;
+  max-width: calc(100vw - 40px);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(151, 71, 255, 0.2);
+  color: #fff;
+}
+
+.vt-card-header {
+  margin-bottom: 14px;
+}
+
+.vt-step-counter {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #9747FF;
+}
+
+.vt-progress-bar {
+  margin-top: 8px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.vt-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #9747FF, #F43397);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.vt-slide-preview {
+  margin-bottom: 14px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vt-slide-preview img {
+  width: 100%;
+  display: block;
+  max-height: 160px;
+  object-fit: cover;
+}
+
+.vt-instruction-text {
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 12px;
+}
+
+.vt-hint-toggle {
+  font-size: 12px;
+  color: #9747FF;
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: 6px;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.vt-hint-toggle:hover {
+  color: #F43397;
+}
+
+.vt-hint-text {
+  background: rgba(151, 71, 255, 0.1);
+  border-left: 3px solid #9747FF;
+  border-radius: 0 6px 6px 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.vt-fallback-notice {
+  background: rgba(244, 51, 151, 0.1);
+  border-left: 3px solid #F43397;
+  border-radius: 0 6px 6px 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 12px;
+}
+
+.vt-card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.vt-card-actions button,
+#vt-fallback-continue {
+  flex: 1;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s, transform 0.1s;
+  border: none;
+}
+
+#vt-skip-step,
+#vt-fallback-continue {
+  background: rgba(151, 71, 255, 0.2);
+  color: #9747FF;
+  border: 1px solid rgba(151, 71, 255, 0.35) !important;
+}
+
+#vt-skip-step:hover,
+#vt-fallback-continue:hover {
+  background: rgba(151, 71, 255, 0.35);
+}
+
+.vt-btn-danger {
+  background: rgba(244, 51, 151, 0.15) !important;
+  color: #F43397 !important;
+  border: 1px solid rgba(244, 51, 151, 0.3) !important;
+}
+
+.vt-btn-danger:hover {
+  background: rgba(244, 51, 151, 0.3) !important;
+}
+
+/* ─── Dry-run modal ────────────────────────────────────────────────────────── */
+#vt-dry-run-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483650;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.vt-dry-run-box {
+  background: #1a1a2e;
+  border: 1px solid rgba(244, 51, 151, 0.3);
+  border-radius: 14px;
+  padding: 28px;
+  width: 440px;
+  max-width: calc(100vw - 40px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(244, 51, 151, 0.1);
+  color: #fff;
+}
+
+.vt-dry-run-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #F43397;
+  margin-bottom: 16px;
+}
+
+.vt-dry-run-body p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.vt-dry-run-body strong {
+  color: #fff;
+  font-weight: 500;
+}
+
+.vt-dry-run-note {
+  font-size: 12px !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-style: italic;
+}
+
+.vt-dry-run-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+#vt-dry-run-gotit {
+  flex: 1;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #9747FF, #F43397);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+#vt-dry-run-gotit:hover {
+  opacity: 0.9;
+}
+
+#vt-dry-run-exit {
+  flex: 1;
+  padding: 10px 16px;
+  background: rgba(244, 51, 151, 0.15);
+  color: #F43397;
+  border: 1px solid rgba(244, 51, 151, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+#vt-dry-run-exit:hover {
+  background: rgba(244, 51, 151, 0.3);
+}
+
+/* ─── Complete card ────────────────────────────────────────────────────────── */
+#vt-complete-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2147483645;
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 40px 36px;
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(151, 71, 255, 0.2);
+  color: #fff;
+  min-width: 300px;
+  max-width: calc(100vw - 40px);
+  animation: vt-complete-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes vt-complete-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.vt-complete-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.vt-complete-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.vt-complete-sim-name {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 10px;
+}
+
+.vt-complete-steps {
+  display: inline-block;
+  background: rgba(151, 71, 255, 0.15);
+  border: 1px solid rgba(151, 71, 255, 0.3);
+  color: #9747FF;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 5px 16px;
+}

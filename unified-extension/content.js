@@ -82,7 +82,7 @@ function detectPlatform() {
 async function init() {
   currentPlatform = detectPlatform();
   
-  const result = await chrome.storage.local.get(['userEmail', 'userRole', 'userHub', 'userHubCode']);
+  const result = await chrome.storage.local.get(['userEmail', 'userRole', 'userHub', 'userHubCode', 'userHubType', 'userSessionRole', 'userExpectedOperators']);
 
   if (!result.userEmail) {
     console.log("[Valmo Ops] No user logged in");
@@ -90,10 +90,13 @@ async function init() {
   }
 
   currentUser = {
-    email:   result.userEmail,
-    role:    result.userRole,
-    hub:     result.userHub     || null,
-    hubCode: result.userHubCode || null
+    email:             result.userEmail,
+    role:              result.userRole,
+    hub:               result.userHub              || null,
+    hubCode:           result.userHubCode          || null,
+    hubType:           result.userHubType          || 'LM',
+    sessionRole:       result.userSessionRole      || 'captain',
+    expectedOperators: result.userExpectedOperators || 1
   };
   console.log(`[Valmo Ops] ${currentUser.role} on ${currentPlatform}`);
 
@@ -215,18 +218,21 @@ async function init() {
       }
 
       window.postMessage({
-        type:          'INIT_CAPTAIN_TIMER',
-        email:         currentUser.email,
-        hub:           currentUser.hub     || null,
-        hubCode:       currentUser.hubCode || null,
-        supabaseUrl:   typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.url      : '',
-        supabaseKey:   typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.anon_key : '',
-        processes:     processes,
-        sequence:      savedSequence,
-        history:       savedHistory,
-        activeSession: savedActiveSession,
-        groqApiKey:    typeof CHATBOT_CONFIG !== 'undefined' ? CHATBOT_CONFIG.api_key : '',
-        systemPrompt:  typeof CHATBOT_CONFIG !== 'undefined' ? CHATBOT_CONFIG.system_prompt : ''
+        type:              'INIT_CAPTAIN_TIMER',
+        email:             currentUser.email,
+        hub:               currentUser.hub              || null,
+        hubCode:           currentUser.hubCode          || null,
+        hubType:           currentUser.hubType          || 'LM',
+        sessionRole:       currentUser.sessionRole      || 'captain',
+        expectedOperators: currentUser.expectedOperators || 1,
+        supabaseUrl:       typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.url      : '',
+        supabaseKey:       typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.anon_key : '',
+        processes:         processes,
+        sequence:          savedSequence,
+        history:           savedHistory,
+        activeSession:     savedActiveSession,
+        groqApiKey:        typeof CHATBOT_CONFIG !== 'undefined' ? CHATBOT_CONFIG.api_key : '',
+        systemPrompt:      typeof CHATBOT_CONFIG !== 'undefined' ? CHATBOT_CONFIG.system_prompt : ''
       }, '*');
 
       console.log('[Captain Timer] ✅ Init message sent with', Object.keys(savedSequence).length, 'sequences,', savedHistory.length, 'history sessions');

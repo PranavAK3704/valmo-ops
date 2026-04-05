@@ -191,18 +191,20 @@ const supabaseSync = (() => {
 
   async function syncCaptainSession(sessionData) {
     await insert('captain_sessions', {
-      session_id:   sessionData.session_id,
-      email:        sessionData.email,
-      hub_code:     sessionData.hub_code    || null,
-      process_name: sessionData.process_name,
-      pct:          sessionData.pct,
-      total_pkrt:   sessionData.total_pkrt,
-      pause_count:  sessionData.pause_count,
-      query_count:  sessionData.query_count,
-      error_count:  sessionData.error_count,
-      started_at:   sessionData.started_at,
-      completed_at: sessionData.completed_at,
-      created_at:   new Date().toISOString()
+      session_id:     sessionData.session_id,
+      email:          sessionData.email,
+      hub_code:       sessionData.hub_code       || null,
+      hub_process_id: sessionData.hub_process_id || null,
+      session_role:   sessionData.session_role   || 'captain',
+      process_name:   sessionData.process_name,
+      pct:            sessionData.pct,
+      total_pkrt:     sessionData.total_pkrt,
+      pause_count:    sessionData.pause_count,
+      query_count:    sessionData.query_count,
+      error_count:    sessionData.error_count,
+      started_at:     sessionData.started_at,
+      completed_at:   sessionData.completed_at,
+      created_at:     new Date().toISOString()
     });
   }
 

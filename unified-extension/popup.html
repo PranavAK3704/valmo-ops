@@ -154,6 +154,17 @@
         style="display:none;"
       />
       <div id="hubFeedback" class="hub-feedback"></div>
+      <div id="roleSelectorSection" style="display:none; margin-bottom:14px;">
+        <div style="font-size:11px; opacity:0.75; margin-bottom:8px; font-weight:600; text-align:center;">Your role in this hub:</div>
+        <div style="display:flex; gap:8px;">
+          <label id="roleCapLabel" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px 8px; background:rgba(255,255,255,0.3); border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; border:2px solid rgba(255,255,255,0.6);">
+            <input type="radio" name="hubRole" value="captain" id="roleCapRadio" style="margin:0; width:auto;" checked> Captain
+          </label>
+          <label id="roleOpLabel" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px 8px; background:rgba(255,255,255,0.15); border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; border:2px solid transparent;">
+            <input type="radio" name="hubRole" value="operator" id="roleOpRadio" style="margin:0; width:auto;"> Operator
+          </label>
+        </div>
+      </div>
       <button class="btn-primary" id="loginBtn">Login</button>
       <div class="hint">
         Hub code is provided by your hub manager.<br>

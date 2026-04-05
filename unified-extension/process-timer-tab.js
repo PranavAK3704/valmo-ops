@@ -75,8 +75,11 @@ class ProcessTimerTab {
    * HTML for the search bar + active process card
    */
   getHTML() {
+    const isOperator = window.captainTimerSystem?.sessionRole === 'operator';
+    const completeLabel = isOperator ? "✓ I'm Done" : '✓ Complete';
+
     return `
-      <!-- Process Search -->
+      <!-- Process Search (always visible; Operators can watch videos but Start is hidden) -->
       <div class="timer-search-section" id="timer-search-section">
         <input
           type="text"
@@ -112,7 +115,7 @@ class ProcessTimerTab {
         <div class="timer-actions">
           <button id="timer-pause-btn" class="timer-btn timer-btn-pause">⏸ Pause</button>
           <button id="timer-resume-btn" class="timer-btn timer-btn-resume" style="display:none;">▶️ Resume</button>
-          <button id="timer-complete-btn" class="timer-btn timer-btn-complete">✓ Complete</button>
+          <button id="timer-complete-btn" class="timer-btn timer-btn-complete">${completeLabel}</button>
         </div>
 
         <div class="timer-metrics">
@@ -129,11 +132,19 @@ class ProcessTimerTab {
 
       <!-- No Active Process placeholder -->
       <div id="timer-no-process" class="timer-no-process">
-        <div class="timer-empty-icon">🎯</div>
-        <p>Search above to start a process</p>
+        ${isOperator
+          ? `<div class="timer-empty-icon">🔗</div>
+             <p>Waiting for Captain to start a process</p>
+             <button id="timer-join-btn" class="timer-btn" style="background:linear-gradient(135deg,#F43397,#9747FF);color:#fff;margin-top:12px;width:100%;padding:12px;">
+               Join Active Process
+             </button>`
+          : `<div class="timer-empty-icon">🎯</div>
+             <p>Search above to start a process</p>`
+        }
       </div>
 
-      <!-- Personal Sequence -->
+      <!-- Personal Sequence (not shown for Operators) -->
+      ${!isOperator ? `
       <div class="timer-sequence-section">
         <div class="timer-sequence-header">
           <span>📋 Your Sequence</span>
@@ -142,7 +153,7 @@ class ProcessTimerTab {
         <div id="timer-sequence-list" class="timer-sequence-list">
           <p class="timer-sequence-empty">Your workflow sequence will appear here as you work</p>
         </div>
-      </div>
+      </div>` : ''}
     `;
   }
 
@@ -169,6 +180,9 @@ class ProcessTimerTab {
 
     // Complete button
     document.getElementById('timer-complete-btn')?.addEventListener('click', () => this.handleComplete());
+
+    // Operator: Join button
+    document.getElementById('timer-join-btn')?.addEventListener('click', () => this.handleJoin());
 
     // Click outside search to close results
     document.addEventListener('click', (e) => {
@@ -202,13 +216,14 @@ class ProcessTimerTab {
       return;
     }
 
+    const isOperator = window.captainTimerSystem?.sessionRole === 'operator';
     resultsEl.innerHTML = results.slice(0, 5).map(proc => `
       <div class="timer-search-result">
         <div class="timer-search-result-name">${this.escape(proc.process_name)}</div>
         <div class="timer-search-result-meta">📂 ${this.escape(proc.url_module || 'General')}</div>
         <div class="timer-search-result-actions">
           ${proc.video_link ? `<button class="timer-result-watch-btn" data-link="${this.escape(proc.video_link)}">🎥 Watch</button>` : ''}
-          <button class="timer-result-start-btn" data-process="${this.escape(proc.process_name)}">▶ Start</button>
+          ${!isOperator ? `<button class="timer-result-start-btn" data-process="${this.escape(proc.process_name)}">▶ Start</button>` : ''}
         </div>
       </div>
     `).join('');
@@ -271,10 +286,32 @@ class ProcessTimerTab {
    * Handle complete button
    */
   async handleComplete() {
-    if (!confirm('Mark this process as complete?')) return;
+    const isOperator = window.captainTimerSystem?.sessionRole === 'operator';
+    const msg = isOperator
+      ? "Mark your portion as complete?\nThe hub process continues until all operators finish."
+      : 'Mark this process as complete?';
+    if (!confirm(msg)) return;
     await window.captainTimerSystem?.stopProcess();
     this.updateUI();
     console.log('[Timer Tab] Completed');
+  }
+
+  /**
+   * Operator: join the active hub process for this hub.
+   */
+  async handleJoin() {
+    const joinBtn = document.getElementById('timer-join-btn');
+    if (joinBtn) { joinBtn.textContent = 'Joining…'; joinBtn.disabled = true; }
+
+    const success = await window.captainTimerSystem?.joinProcess();
+
+    if (!success) {
+      if (joinBtn) { joinBtn.textContent = 'Join Active Process'; joinBtn.disabled = false; }
+      return;
+    }
+
+    this.updateUI();
+    console.log('[Timer Tab] Operator joined process');
   }
 
   /**
