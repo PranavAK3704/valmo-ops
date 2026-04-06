@@ -401,20 +401,31 @@ class ProcessPulseOverlay {
     document.getElementById('valmo-close')?.addEventListener('click', () => this.closePanel());
     
     document.getElementById('valmo-process-list')?.addEventListener('click', (e) => {
-      // Watch Video
-      const videoBtn = e.target.closest('.valmo-video-btn');
-      if (videoBtn) {
-        const link = videoBtn.dataset.videoLink;
-        if (!link || link === 'demo://placeholder_video') {
-          videoBtn.textContent = 'Coming soon...';
-          setTimeout(() => { videoBtn.textContent = '🎥 Watch'; }, 2000);
-          return;
-        }
-        if (!link.startsWith('http') && !link.startsWith('demo://')) {
-          window.open(chrome.runtime.getURL('data/' + link), '_blank');
-          return;
-        }
-        window.open(link, '_blank', 'noopener,noreferrer');
+      // Simulate — open simulation for this process
+      const simBtn = e.target.closest('.valmo-sim-btn');
+      if (simBtn) {
+        const processName = simBtn.dataset.process;
+        simBtn.textContent = 'Loading...';
+        simBtn.disabled = true;
+        const SB_URL = 'https://wfnmltorfvaokqbzggkn.supabase.co';
+        const SB_KEY = 'sb_publishable_kVRokdcfNT-egywk-KbQ3g_mEs5QVGW';
+        fetch(`${SB_URL}/rest/v1/simulations?published=eq.true&process_name=ilike.${encodeURIComponent(processName)}&select=id&limit=1`, {
+          headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }
+        })
+        .then(r => r.json())
+        .then(rows => {
+          if (rows && rows.length > 0) {
+            window.open(`https://slides-to-sim.vercel.app/sim/${rows[0].id}`, '_blank', 'noopener,noreferrer');
+          } else {
+            simBtn.textContent = 'Not available';
+            setTimeout(() => { simBtn.textContent = '▶ Simulate'; simBtn.disabled = false; }, 2000);
+          }
+        })
+        .catch(() => {
+          simBtn.textContent = 'Error';
+          setTimeout(() => { simBtn.textContent = '▶ Simulate'; simBtn.disabled = false; }, 2000);
+        });
+        return;
       }
 
       // Start Process
@@ -507,8 +518,8 @@ class ProcessPulseOverlay {
       <div class="valmo-process-card">
         <div class="valmo-process-name">${this.escape(proc.process_name)}</div>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-          <button class="valmo-video-btn" data-video-link="${this.escape(proc.video_link || '')}">🎥 Watch Video</button>
-          <button class="valmo-start-btn" data-process="${this.escape(proc.process_name)}">▶ Start Process</button>
+          <button class="valmo-sim-btn" data-process="${this.escape(proc.process_name)}">▶ Simulate</button>
+          <button class="valmo-start-btn" data-process="${this.escape(proc.process_name)}">⏱ Start Timer</button>
         </div>
       </div>
     `).join('');

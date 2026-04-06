@@ -44,7 +44,7 @@ async function loadLog10Processes() {
         process_name: cols[0]?.trim().replace(/"/g, ''),
         url_module:   cols[1]?.trim().replace(/"/g, ''),
         start_tab:    cols[2]?.trim().replace(/"/g, ''),
-        video_link:   cols[3]?.trim().replace(/"/g, ''),
+        video_link:   cols[3]?.trim().replace(/"/g, ''),  // kept for future use — currently replaced by simulations
         platform:     cols[4]?.trim().replace(/"/g, ''),
         // PHASE 1: New columns for progress tracking & gamification
         priority:     cols[5]?.trim().replace(/"/g, '') || 'GOOD_TO_KNOW',
