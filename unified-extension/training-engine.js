@@ -38,21 +38,64 @@
   }
 
   // ─── DOM element finder ──────────────────────────────────────────────────────
+
+  // Returns true only for elements with real, visible dimensions — filters out
+  // decorative indicators, borders, empty containers, and off-screen nodes.
+  function isUsableElement(el) {
+    const r = el.getBoundingClientRect();
+    if (r.width < 24 || r.height < 12) return false;          // too small to be a real target
+    if (r.top < 0 || r.left < 0) return false;                // off-screen
+    if (r.top > window.innerHeight) return false;              // below viewport
+    const style = window.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+    return true;
+  }
+
+  // Returns the own text of an element, ignoring deeply nested children.
+  // A sidebar item like <li>Inventory<span class="icon">…</span></li> should
+  // match "Inventory" even though textContent includes the icon text.
+  function ownText(el) {
+    return [...el.childNodes]
+      .filter(n => n.nodeType === Node.TEXT_NODE)
+      .map(n => n.textContent.trim())
+      .join(' ')
+      .trim()
+      .toLowerCase();
+  }
+
   function findElement(elementText) {
-    const selectors = 'button, a, [role="tab"], [role="button"], [role="menuitem"], li, td, th, span, div';
-    const els = [...document.querySelectorAll(selectors)];
+    if (!elementText) return null;
+    const text = elementText.trim().toLowerCase();
 
-    // 1. Exact match
-    let el = els.find(e => e.textContent.trim() === elementText);
+    // Tier 1 — semantic interactive elements only (no div/span — too broad)
+    const tier1 = [...document.querySelectorAll(
+      'button, a, [role="tab"], [role="button"], [role="menuitem"], [role="option"], li, td, th, input, select'
+    )].filter(isUsableElement);
 
-    // 2. Case-insensitive exact
-    if (!el) el = els.find(e => e.textContent.trim().toLowerCase() === elementText.toLowerCase());
+    // 1a. Exact own-text match (ignores icon/badge text inside the element)
+    let el = tier1.find(e => ownText(e) === text);
 
-    // 3. Contains (whole word, reasonably short)
-    if (!el) el = els.find(e => {
+    // 1b. Full textContent exact, case-insensitive
+    if (!el) el = tier1.find(e => e.textContent.trim().toLowerCase() === text);
+
+    // 1c. Contains match — but element text must not be much longer than the target
+    //     (prevents matching huge container elements)
+    if (!el) el = tier1.find(e => {
       const t = e.textContent.trim().toLowerCase();
-      return t.includes(elementText.toLowerCase()) && t.length < elementText.length * 3;
+      return t.includes(text) && t.length <= text.length * 2.5;
     });
+
+    // Tier 2 — fall back to spans/divs only if tier 1 failed
+    if (!el) {
+      const tier2 = [...document.querySelectorAll('span, div')].filter(isUsableElement)
+        .filter(e => e.children.length <= 3); // skip container divs with many children
+
+      el = tier2.find(e => e.textContent.trim().toLowerCase() === text);
+      if (!el) el = tier2.find(e => {
+        const t = e.textContent.trim().toLowerCase();
+        return t.includes(text) && t.length <= text.length * 2;
+      });
+    }
 
     return el || null;
   }
@@ -91,9 +134,13 @@
       overlay.appendChild(d);
     });
 
-    // Ring
+    // Ring — enforce minimum visible size regardless of element dimensions
+    const ringW = Math.max(rect.width + pad * 2, 80);
+    const ringH = Math.max(rect.height + pad * 2, 32);
+    const ringLeft = rect.left + (rect.width / 2) - (ringW / 2);
+    const ringTop  = rect.top  + (rect.height / 2) - (ringH / 2);
     const ring = document.createElement('div');
-    ring.style.cssText = `position:fixed;top:${rect.top - pad}px;left:${rect.left - pad}px;width:${rect.width + pad * 2}px;height:${rect.height + pad * 2}px;border:2px solid #F43397;border-radius:6px;box-shadow:0 0 0 2px rgba(244,51,151,0.3),0 0 12px rgba(244,51,151,0.4);pointer-events:none;animation:vt-pulse 2s infinite;`;
+    ring.style.cssText = `position:fixed;top:${ringTop}px;left:${ringLeft}px;width:${ringW}px;height:${ringH}px;border:2px solid #F43397;border-radius:6px;box-shadow:0 0 0 2px rgba(244,51,151,0.3),0 0 12px rgba(244,51,151,0.4);pointer-events:none;animation:vt-pulse 2s infinite;`;
     overlay.appendChild(ring);
 
     document.body.appendChild(overlay);
