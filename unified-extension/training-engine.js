@@ -65,7 +65,9 @@
 
   function findElement(elementText) {
     if (!elementText) return null;
-    const text = elementText.trim().toLowerCase();
+    // Strip parenthetical step numbers like "(1)", "(2)" that Gemini sometimes includes
+    const text = elementText.replace(/\s*\(\d+\)\s*/g, '').trim().toLowerCase();
+    if (!text) return null;
 
     // Tier 1 — semantic interactive elements only (no div/span — too broad)
     const tier1 = [...document.querySelectorAll(
