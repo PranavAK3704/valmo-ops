@@ -64,6 +64,7 @@
         "smart-chatbot.js",
         "content.js",
         "training-engine.js",
+        "process-detection.js",
         "process-pulse-enhanced.js"
       ],
       "run_at": "document_idle"

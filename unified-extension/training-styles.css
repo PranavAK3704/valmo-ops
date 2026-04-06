@@ -540,3 +540,125 @@
   border-radius: 20px;
   padding: 5px 16px;
 }
+
+/* ── Process Detection Toasts ────────────────────────────────────────────────── */
+
+.vt-pd-confirm {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 2147483640;
+  background: #1a1a2e;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 14px 16px;
+  min-width: 300px;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.vt-pd-confirm.vt-pd-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.vt-pd-confirm--end {
+  border-color: rgba(34,197,94,0.3);
+}
+
+.vt-pd-confirm-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.vt-pd-confirm-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #F43397, #9747FF);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.vt-pd-confirm--end .vt-pd-confirm-icon {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.vt-pd-confirm-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vt-pd-confirm-text strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.vt-pd-confirm-text span {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+}
+
+.vt-pd-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.vt-pd-btn-yes {
+  flex: 1;
+  padding: 8px;
+  background: linear-gradient(135deg, #F43397, #9747FF);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vt-pd-btn-no {
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.vt-pd-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 2147483645;
+  background: #1a1a2e;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.9);
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.vt-pd-toast--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

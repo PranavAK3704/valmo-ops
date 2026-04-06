@@ -254,14 +254,14 @@ class CaptainTimerSystem {
   /**
    * Start a process
    */
-  async startProcess(processName) {
+  async startProcess(processName, { fromAutoDetect = false } = {}) {
     if (!this.hubCode) {
       this._showToast('⚠️ No hub code set. Log out and log back in — your hub code must be configured before tracking processes.', '#ef4444');
       console.warn('[Captain Timer] startProcess blocked — no hub_code set');
       return false;
     }
 
-    if (this.sessionRole === 'operator') {
+    if (this.sessionRole === 'operator' && !fromAutoDetect) {
       this._showToast('⚠️ Operators use "Join Active Process" — you cannot start a process directly.', '#ef4444');
       console.warn('[Captain Timer] startProcess blocked — operator must use joinProcess()');
       return false;
