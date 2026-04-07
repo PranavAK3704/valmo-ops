@@ -17,7 +17,23 @@ const userRoleEl    = document.getElementById('userRole');
 // Resolved hub from Supabase — null until validated
 let resolvedHub = null; // { hub_code, hub_name, hub_type, expected_operators }
 
-// Hub code is always required — show it on load
+// ── Role detection ────────────────────────────────────────────────────────────
+function isL1Agent(email) {
+  return email.toLowerCase().includes('_technotask@meesho.com');
+}
+
+// Show/hide hub code based on email
+emailInput.addEventListener('input', () => {
+  if (isL1Agent(emailInput.value.trim())) {
+    hubCodeInput.style.display = 'none';
+    clearHubFeedback();
+    resolvedHub = null;
+  } else {
+    hubCodeInput.style.display = 'block';
+  }
+});
+
+// Hub code shown by default (for captains/operators)
 hubCodeInput.style.display = 'block';
 
 // ── Hub code live validation (debounced 600ms) ────────────────────────────────
@@ -84,7 +100,27 @@ loginBtn.addEventListener('click', async () => {
     return showError('Please enter a valid email');
   }
 
-  // Ensure hub code is validated
+  // ── L1 Agent flow (no hub required) ──────────────────────────────────────────
+  if (isL1Agent(email)) {
+    chrome.storage.local.set(
+      { userEmail: email, userRole: 'L1 Agent', userHub: '', userHubCode: '',
+        userHubType: 'LM', userSessionRole: 'operator', userExpectedOperators: 1 },
+      () => {
+        showLoggedIn(email, 'L1 Agent', '', '', 'LM', 'operator');
+        chrome.tabs.query({}, (tabs) => {
+          tabs.forEach(tab => {
+            chrome.tabs.sendMessage(tab.id, {
+              type: 'USER_LOGGED_IN', email, role: 'L1 Agent', hub: '', hubCode: '',
+              hubType: 'LM', sessionRole: 'operator', expectedOperators: 1
+            }).catch(() => {});
+          });
+        });
+      }
+    );
+    return;
+  }
+
+  // ── Captain / Operator flow (hub required) ────────────────────────────────────
   if (!resolvedHub) {
     const raw = hubCodeInput.value.trim().toUpperCase();
     if (!raw) return showError('Please enter your hub code');
@@ -96,7 +132,6 @@ loginBtn.addEventListener('click', async () => {
     if (!resolvedHub) return showError('Invalid hub code — cannot log in');
   }
 
-  // Validate email against hub_members
   loginBtn.disabled = true;
   loginBtn.textContent = 'Checking…';
   try {
@@ -112,11 +147,11 @@ loginBtn.addEventListener('click', async () => {
       return showError('Email not registered for this hub. Contact your manager.');
     }
 
-    const dbRole         = memberRows[0].role; // 'Captain' or 'Operator'
-    const sessionRole    = dbRole === 'Captain' ? 'captain' : 'operator';
-    const hub            = resolvedHub.hub_name;
-    const hubCode        = resolvedHub.hub_code;
-    const hubType        = resolvedHub.hub_type || 'LM';
+    const dbRole            = memberRows[0].role;
+    const sessionRole       = dbRole === 'Captain' ? 'captain' : 'operator';
+    const hub               = resolvedHub.hub_name;
+    const hubCode           = resolvedHub.hub_code;
+    const hubType           = resolvedHub.hub_type || 'LM';
     const expectedOperators = resolvedHub.expected_operators || 1;
 
     chrome.storage.local.set(
