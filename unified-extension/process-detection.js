@@ -311,6 +311,17 @@
     console.log('[ProcessDetection] Running');
   }
 
+  // Reset all detection state when process is stopped (from any source)
+  window.addEventListener('message', (e) => {
+    if (e.data?.type === 'PD_STOP_PROCESS') {
+      sequences = {};
+      activeId = null;
+      removeEl('vt-pd-start');
+      removeEl('vt-pd-end');
+      console.log('[ProcessDetection] State reset on stop');
+    }
+  });
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
