@@ -368,6 +368,24 @@
     }
   });
 
+  // Reset unconfirmed sequences when URL changes away from their expected page
+  let _lastUrl = location.href;
+  setInterval(() => {
+    if (location.href === _lastUrl) return;
+    _lastUrl = location.href;
+    for (const proc of processes) {
+      const seq = sequences[proc.id];
+      if (!seq?.pseudoStart || seq.confirmed) continue; // only unconfirmed pseudo-timers
+      // Check if the current next step's urlPattern still matches
+      const nextStep = proc.steps[seq.step] || proc.steps[0];
+      if (nextStep?.urlPattern && !location.href.includes(nextStep.urlPattern)) {
+        console.log(`[ProcessDetection] "${proc.process_name}": URL changed, resetting unconfirmed sequence`);
+        hideSilentWarning();
+        resetSeq(proc.id);
+      }
+    }
+  }, 300);
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
