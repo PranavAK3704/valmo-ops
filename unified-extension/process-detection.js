@@ -146,15 +146,14 @@
         console.log(`[ProcessDetection] "${proc.process_name}": step ${seq.step} matched`);
       }
 
-      // ── Confirmation point (step N or mid-point for short processes) ──
-      // For short processes (≤4 steps), confirm at step 2; otherwise step 3
+      // ── Confirmation point ──
       const confirmAt = proc.steps.length <= 4 ? 2 : CONFIRMATION_STEP;
-      if (seq.step === confirmAt && !seq.confirmed) {
+      if (seq.step === confirmAt && !seq.confirmed && !seq.silentMode) {
         showStartConfirmation(proc, seq);
       }
 
-      // ── End detection (last step reached, already confirmed) ──
-      if (seq.confirmed && seq.step >= proc.steps.length) {
+      // ── End detection — fires for confirmed OR silentMode sequences ──
+      if ((seq.confirmed || seq.silentMode) && seq.step >= proc.steps.length) {
         showEndConfirmation(proc, seq);
       }
 
@@ -195,12 +194,20 @@
     });
     div.querySelector('.vt-pd-btn-no').addEventListener('click', (e) => {
       e.stopPropagation();
-      resetSeq(proc.id);
+      // Keep tracking silently — if they complete the process, record it anyway
+      seq.silentMode = true;
+      sequences[proc.id] = seq;
       div.remove();
     });
 
-    // Auto-dismiss after 12s if no response
-    setTimeout(() => div?.remove(), 12000);
+    // Auto-dismiss after 12s — treat as silent mode (assume they're doing it)
+    setTimeout(() => {
+      if (div.isConnected) {
+        seq.silentMode = true;
+        sequences[proc.id] = seq;
+        div.remove();
+      }
+    }, 12000);
   }
 
   function confirmStart(proc, seq) {
@@ -230,7 +237,8 @@
   function showEndConfirmation(proc, seq) {
     removeEl('vt-pd-end');
 
-    const elapsed = Math.round((Date.now() - seq.confirmedStart) / 1000);
+    const startTime = seq.confirmedStart || seq.pseudoStart || Date.now();
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
     const timeStr = elapsed >= 60
       ? `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`
       : `${elapsed}s`;
@@ -276,10 +284,14 @@
       return;
     }
 
-    // captainTimerSystem lives in the page world — use postMessage to reach it
-    window.postMessage({ type: 'PD_STOP_PROCESS' }, '*');
+    if (seq.silentMode) {
+      // Was never formally started — start then immediately stop to record PCT
+      window.postMessage({ type: 'PD_SILENT_RECORD', processName: proc.process_name, elapsed }, '*');
+    } else {
+      window.postMessage({ type: 'PD_STOP_PROCESS' }, '*');
+    }
 
-    console.log(`[ProcessDetection] "${proc.process_name}": confirmed end — ${elapsed}s`);
+    console.log(`[ProcessDetection] "${proc.process_name}": confirmed end — ${elapsed}s (silentMode=${!!seq.silentMode})`);
     // Full wipe so process can be re-detected immediately
     delete sequences[proc.id];
     activeId = null;

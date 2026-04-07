@@ -1122,6 +1122,17 @@ window.addEventListener('message', async (event) => {
     })();
   }
 
+  if (event.data.type === 'PD_SILENT_RECORD') {
+    // Process completed without confirmation — start and immediately stop to record PCT
+    (async () => {
+      const cts = window.captainTimerSystem;
+      if (!cts) return;
+      if (cts.currentSession) await cts.stopProcess();
+      await cts.startProcess(event.data.processName, { fromAutoDetect: true });
+      await cts.stopProcess();
+    })();
+  }
+
   if (event.data.type === 'PD_STOP_PROCESS') {
     const cts = window.captainTimerSystem;
     if (!cts?.currentSession) return;
