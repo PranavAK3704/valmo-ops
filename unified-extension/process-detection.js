@@ -206,13 +206,19 @@
     activeId          = proc.id;
     sequences[proc.id] = seq;
 
-    // Trigger captainTimerSystem — works for both captain and operator
-    const cts = window.captainTimerSystem;
-    if (cts) {
-      // If a stale session exists, stop it first then start fresh
-      if (cts.currentSession) cts.stopProcess();
-      cts.startProcess(proc.process_name, { fromAutoDetect: true });
+    // Trigger captainTimerSystem — poll until available (it's injected dynamically)
+    function _startWhenReady(retries) {
+      const cts = window.captainTimerSystem;
+      if (cts) {
+        if (cts.currentSession) cts.stopProcess();
+        cts.startProcess(proc.process_name, { fromAutoDetect: true });
+      } else if (retries > 0) {
+        setTimeout(() => _startWhenReady(retries - 1), 300);
+      } else {
+        console.warn('[ProcessDetection] captainTimerSystem not available after retries');
+      }
     }
+    _startWhenReady(10);
 
     // Open the extension panel and switch to timer tab so user can see/pause
     setTimeout(() => {
@@ -288,9 +294,7 @@
 
     // Hand off to captainTimerSystem to stop, calculate metrics, and sync
     const cts = window.captainTimerSystem;
-    if (cts?.currentSession) {
-      cts.stopProcess();
-    }
+    if (cts) cts.stopProcess();
 
     console.log(`[ProcessDetection] "${proc.process_name}": confirmed end — ${elapsed}s`);
     resetSeq(proc.id);
