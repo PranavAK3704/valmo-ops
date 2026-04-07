@@ -223,7 +223,6 @@ class ProcessTimerTab {
         <div class="timer-search-result-meta">📂 ${this.escape(proc.url_module || 'General')}</div>
         <div class="timer-search-result-actions">
           ${proc.video_link ? `<button class="timer-result-watch-btn" data-link="${this.escape(proc.video_link)}">🎥 Watch</button>` : ''}
-          ${!isOperator ? `<button class="timer-result-start-btn" data-process="${this.escape(proc.process_name)}">▶ Start</button>` : ''}
         </div>
       </div>
     `).join('');

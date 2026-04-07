@@ -555,8 +555,7 @@ class CaptainTimerSystem {
       this._notifyOperatorDone(metrics.pct);
     }
 
-    // Show next process notification
-    this.showNextProcessNotification();
+    // Next process notification disabled — process detection handles sequencing
 
     return completedSession;
   }

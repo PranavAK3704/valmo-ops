@@ -628,13 +628,34 @@
     const btn = document.createElement('button');
     btn.id = 'vt-launcher';
     btn.textContent = '🎓 Training';
-    btn.addEventListener('click', function () {
+    btn.dataset.collapsed = 'false';
+
+    btn.addEventListener('click', function (e) {
+      // Long-press or double-click to collapse; single click opens modal
+      if (btn.dataset.collapsed === 'true') {
+        btn.dataset.collapsed = 'false';
+        btn.textContent = '🎓 Training';
+        return;
+      }
       if (document.getElementById('vt-search-modal')) {
         removeSearchModal();
       } else {
         showSearchModal();
       }
     });
+
+    // Right-click to collapse
+    btn.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      if (btn.dataset.collapsed === 'false') {
+        btn.dataset.collapsed = 'true';
+        btn.textContent = '🎓';
+      } else {
+        btn.dataset.collapsed = 'false';
+        btn.textContent = '🎓 Training';
+      }
+    });
+
     document.body.appendChild(btn);
   }
 
