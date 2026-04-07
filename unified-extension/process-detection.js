@@ -97,7 +97,7 @@
   function resetSeq(processId) {
     const seq = sequences[processId];
     if (seq?.timeoutId) clearTimeout(seq.timeoutId);
-    sequences[processId] = { step: 0, pseudoStart: null, confirmedStart: null, confirmed: false, timeoutId: null };
+    delete sequences[processId];
     if (activeId === processId) activeId = null;
   }
 
@@ -279,7 +279,9 @@
     window.postMessage({ type: 'PD_STOP_PROCESS' }, '*');
 
     console.log(`[ProcessDetection] "${proc.process_name}": confirmed end — ${elapsed}s`);
-    resetSeq(proc.id);
+    // Full wipe so process can be re-detected immediately
+    delete sequences[proc.id];
+    activeId = null;
   }
 
   // ── Toast helper ──────────────────────────────────────────────────────────────

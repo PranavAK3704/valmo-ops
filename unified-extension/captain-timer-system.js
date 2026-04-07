@@ -298,6 +298,7 @@ class CaptainTimerSystem {
       elapsed_time:  0
     };
 
+    session.fromAutoDetect = fromAutoDetect;
     this.currentSession = session;
     if (hubProcessId) this.hubProcessId = hubProcessId;
     await this.saveCurrentSession();

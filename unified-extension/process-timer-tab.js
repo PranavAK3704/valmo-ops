@@ -357,6 +357,10 @@ class ProcessTimerTab {
       const statusEl = document.getElementById('timer-status');
       const pauseBtn = document.getElementById('timer-pause-btn');
       const resumeBtn = document.getElementById('timer-resume-btn');
+      const completeBtn = document.getElementById('timer-complete-btn');
+
+      // Auto-detected sessions end via click detection — hide manual complete button
+      if (completeBtn) completeBtn.style.display = session.fromAutoDetect ? 'none' : 'inline-block';
 
       if (session.timer_running) {
         statusEl.innerHTML = '<span class="timer-status-badge running">● Running</span>';
