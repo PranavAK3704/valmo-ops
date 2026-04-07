@@ -212,6 +212,24 @@
       cts.startProcess(proc.process_name, { fromAutoDetect: true });
     }
 
+    // Open the extension panel and switch to timer tab so user can see/pause
+    setTimeout(() => {
+      const panel = document.getElementById('valmo-panel');
+      if (panel && !panel.classList.contains('open')) {
+        document.getElementById('valmo-tab')?.click();
+      }
+      // Switch to timer tab
+      document.querySelector('[data-tab="timer"]')?.click();
+    }, 400);
+
+    // Open the extension panel so user can see the active timer widget
+    setTimeout(() => {
+      const panel = document.getElementById('valmo-panel');
+      if (panel && !panel.classList.contains('open')) {
+        document.getElementById('valmo-tab')?.click();
+      }
+    }, 400);
+
     showToast(`⏱ ${proc.process_name} — timer started`);
     console.log(`[ProcessDetection] "${proc.process_name}": confirmed start at step ${seq.step}`);
   }
