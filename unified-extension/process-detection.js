@@ -17,7 +17,7 @@
   const SB_KEY = 'sb_publishable_kVRokdcfNT-egywk-KbQ3g_mEs5QVGW';
 
   // ── Config ────────────────────────────────────────────────────────────────────
-  const CONFIRMATION_STEP    = 3;          // confirm start at this step index (1-based)
+  const CONFIRMATION_STEP    = 3;          // confirm start at this step (minimum — never confirm before step 3)
   const SEQUENCE_TIMEOUT_MS  = 30 * 60 * 1000; // reset sequence after 30min inactivity
   const MIN_PROCESS_SECONDS  = 20;         // reject PCT below this — likely a test click
   const RELOAD_INTERVAL_MS   = 5 * 60 * 1000;  // reload process definitions every 5min
@@ -147,7 +147,8 @@
       }
 
       // ── Confirmation point (step N or mid-point for short processes) ──
-      const confirmAt = Math.min(CONFIRMATION_STEP, Math.ceil(proc.steps.length / 2));
+      // For short processes (≤4 steps), confirm at step 2; otherwise step 3
+      const confirmAt = proc.steps.length <= 4 ? 2 : CONFIRMATION_STEP;
       if (seq.step === confirmAt && !seq.confirmed) {
         showStartConfirmation(proc, seq);
       }

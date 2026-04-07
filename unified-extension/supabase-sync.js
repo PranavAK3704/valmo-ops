@@ -190,7 +190,7 @@ const supabaseSync = (() => {
   // hub_code is now a required field — denormalized for fast hub-scoped queries
 
   async function syncCaptainSession(sessionData) {
-    await insert('captain_sessions', {
+    await upsert('captain_sessions', {
       session_id:     sessionData.session_id,
       email:          sessionData.email,
       hub_code:       sessionData.hub_code       || null,
@@ -205,7 +205,7 @@ const supabaseSync = (() => {
       started_at:     sessionData.started_at,
       completed_at:   sessionData.completed_at,
       created_at:     new Date().toISOString()
-    });
+    }, 'session_id');
   }
 
   // ── Per-pause detail sync ───────────────────────────────────────────────────

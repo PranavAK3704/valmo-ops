@@ -1114,11 +1114,12 @@ window.addEventListener('message', async (event) => {
 
   // ── Process detection bridge (content script → page world) ───────────────────
   if (event.data.type === 'PD_START_PROCESS') {
-    const cts = window.captainTimerSystem;
-    if (cts) {
-      if (cts.currentSession) cts.stopProcess();
-      cts.startProcess(event.data.processName, { fromAutoDetect: true });
-    }
+    (async () => {
+      const cts = window.captainTimerSystem;
+      if (!cts) return;
+      if (cts.currentSession) await cts.stopProcess();
+      await cts.startProcess(event.data.processName, { fromAutoDetect: true });
+    })();
   }
 
   if (event.data.type === 'PD_STOP_PROCESS') {
