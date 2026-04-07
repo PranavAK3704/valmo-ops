@@ -1124,7 +1124,10 @@ window.addEventListener('message', async (event) => {
 
   if (event.data.type === 'PD_STOP_PROCESS') {
     const cts = window.captainTimerSystem;
-    if (cts) cts.stopProcess();
+    if (!cts?.currentSession) return;
+    // Ignore if session just started — likely a late-arriving stop from previous cycle
+    if (Date.now() - cts.currentSession.start_time < 2000) return;
+    cts.stopProcess();
   }
 });
 
