@@ -117,8 +117,10 @@
     for (const proc of processes) {
       const seq = getSeq(proc.id);
 
-      // If another process is active (confirmed), ignore others
+      // If another process is active (confirmed or pseudo-started), ignore others
+      const anyPseudoActive = Object.entries(sequences).some(([id, s]) => s.pseudoStart && id !== proc.id);
       if (activeId && activeId !== proc.id) continue;
+      if (anyPseudoActive && !sequences[proc.id]?.pseudoStart) continue;
 
       // If this process is already confirmed+complete, skip
       if (seq.confirmed && seq.step >= proc.steps.length) continue;
@@ -206,19 +208,8 @@
     activeId          = proc.id;
     sequences[proc.id] = seq;
 
-    // Trigger captainTimerSystem — poll until available (it's injected dynamically)
-    function _startWhenReady(retries) {
-      const cts = window.captainTimerSystem;
-      if (cts) {
-        if (cts.currentSession) cts.stopProcess();
-        cts.startProcess(proc.process_name, { fromAutoDetect: true });
-      } else if (retries > 0) {
-        setTimeout(() => _startWhenReady(retries - 1), 300);
-      } else {
-        console.warn('[ProcessDetection] captainTimerSystem not available after retries');
-      }
-    }
-    _startWhenReady(10);
+    // captainTimerSystem lives in the page world — use postMessage to reach it
+    window.postMessage({ type: 'PD_START_PROCESS', processName: proc.process_name }, '*');
 
     // Open the extension panel and switch to timer tab so user can see/pause
     setTimeout(() => {
@@ -292,9 +283,8 @@
       return;
     }
 
-    // Hand off to captainTimerSystem to stop, calculate metrics, and sync
-    const cts = window.captainTimerSystem;
-    if (cts) cts.stopProcess();
+    // captainTimerSystem lives in the page world — use postMessage to reach it
+    window.postMessage({ type: 'PD_STOP_PROCESS' }, '*');
 
     console.log(`[ProcessDetection] "${proc.process_name}": confirmed end — ${elapsed}s`);
     resetSeq(proc.id);
