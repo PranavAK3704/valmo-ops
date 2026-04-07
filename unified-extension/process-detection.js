@@ -110,9 +110,25 @@
     }, SEQUENCE_TIMEOUT_MS);
   }
 
+  // ── Silent warning pill ───────────────────────────────────────────────────────
+  function showSilentWarning(procName) {
+    removeEl('vt-pd-silent-warn');
+    const el = document.createElement('div');
+    el.id = 'vt-pd-silent-warn';
+    el.className = 'vt-pd-silent-warn';
+    el.textContent = `⏱ ${procName} — timer running (unconfirmed)`;
+    document.body.appendChild(el);
+  }
+
+  function hideSilentWarning() {
+    removeEl('vt-pd-silent-warn');
+  }
+
   // ── Main click handler ────────────────────────────────────────────────────────
   function handleClick(e) {
     if (!processes.length) return;
+
+    let matched = false;
 
     for (const proc of processes) {
       const seq = getSeq(proc.id);
@@ -134,12 +150,13 @@
       // Click match
       if (!matchesStep(e.target, nextStep)) continue;
 
+      matched = true;
+
       // ── Step matched ──
       seq.step++;
       armTimeout(proc.id);
 
       if (seq.step === 1) {
-        // Step 1: start pseudo-timer silently
         seq.pseudoStart = Date.now();
         console.log(`[ProcessDetection] "${proc.process_name}": step 1 matched → pseudo-timer started`);
       } else {
@@ -152,13 +169,30 @@
         showStartConfirmation(proc, seq);
       }
 
+      // ── Show silent warning if in silent mode ──
+      if (seq.silentMode) showSilentWarning(proc.process_name);
+
       // ── End detection — fires for confirmed OR silentMode sequences ──
       if ((seq.confirmed || seq.silentMode) && seq.step >= proc.steps.length) {
+        hideSilentWarning();
         showEndConfirmation(proc, seq);
       }
 
       sequences[proc.id] = seq;
-      break; // one process per click
+      break;
+    }
+
+    // Case 3: click outside sequence while in silent mode → stop pseudo-timer
+    if (!matched) {
+      const silentEntry = Object.entries(sequences).find(([, s]) => s.silentMode && s.pseudoStart);
+      if (silentEntry) {
+        const [procId, seq] = silentEntry;
+        const elapsed = Math.round((Date.now() - seq.pseudoStart) / 1000);
+        console.log(`[ProcessDetection] Off-sequence click in silent mode — stopping after ${elapsed}s`);
+        hideSilentWarning();
+        delete sequences[procId];
+        activeId = null;
+      }
     }
   }
 
