@@ -211,23 +211,15 @@
     // captainTimerSystem lives in the page world — use postMessage to reach it
     window.postMessage({ type: 'PD_START_PROCESS', processName: proc.process_name }, '*');
 
-    // Open the extension panel and switch to timer tab so user can see/pause
+    // Open panel + switch to Videos tab (timer lives there) after CTS starts
     setTimeout(() => {
       const panel = document.getElementById('valmo-panel');
       if (panel && !panel.classList.contains('open')) {
         document.getElementById('valmo-tab')?.click();
       }
-      // Switch to timer tab
-      document.querySelector('[data-tab="timer"]')?.click();
-    }, 400);
-
-    // Open the extension panel so user can see the active timer widget
-    setTimeout(() => {
-      const panel = document.getElementById('valmo-panel');
-      if (panel && !panel.classList.contains('open')) {
-        document.getElementById('valmo-tab')?.click();
-      }
-    }, 400);
+      // Switch to Videos tab which contains the active process card + pause button
+      document.querySelector('[data-tab="videos"]')?.click();
+    }, 600);
 
     showToast(`⏱ ${proc.process_name} — timer started`);
     console.log(`[ProcessDetection] "${proc.process_name}": confirmed start at step ${seq.step}`);
