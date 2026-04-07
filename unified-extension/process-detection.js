@@ -208,7 +208,9 @@
 
     // Trigger captainTimerSystem — works for both captain and operator
     const cts = window.captainTimerSystem;
-    if (cts && !cts.currentSession) {
+    if (cts) {
+      // If a stale session exists, stop it first then start fresh
+      if (cts.currentSession) cts.stopProcess();
       cts.startProcess(proc.process_name, { fromAutoDetect: true });
     }
 
