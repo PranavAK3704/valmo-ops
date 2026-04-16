@@ -996,7 +996,9 @@ class CaptainTimerSystem {
             aggregated_pct = Math.round(allPcts.reduce((a, b) => a + b, 0) / projVol);
           } else {
             // Path B: geometric mean (volume-robust, no extra data needed)
-            aggregated_pct = Math.round(Math.exp(allPcts.reduce((s, t) => s + Math.log(t), 0) / allPcts.length));
+            // Guard against log(0) = -Infinity by clamping to 1s minimum
+            const safePcts = allPcts.map(t => Math.max(t, 1));
+            aggregated_pct = Math.round(Math.exp(safePcts.reduce((s, t) => s + Math.log(t), 0) / safePcts.length));
           }
           patchData.aggregated_pct = aggregated_pct;
           patchData.completed_at   = new Date().toISOString();
@@ -1127,8 +1129,8 @@ window.addEventListener('message', async (event) => {
       const cts = window.captainTimerSystem;
       if (!cts) return;
       if (cts.currentSession) await cts.stopProcess();
-      await cts.startProcess(event.data.processName, { fromAutoDetect: true });
-      await cts.stopProcess();
+      const ok = await cts.startProcess(event.data.processName, { fromAutoDetect: true });
+      if (ok) await cts.stopProcess();
     })();
   }
 

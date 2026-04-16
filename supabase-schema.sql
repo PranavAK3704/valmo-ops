@@ -465,3 +465,28 @@ ORDER BY avg_qfd DESC;
 INSERT INTO hubs (hub_code, hub_name, city, region, active)
 VALUES ('TEST-001', 'Test Hub 1', 'Mumbai', 'West', true)
 ON CONFLICT (hub_code) DO NOTHING;
+
+-- ================================================================
+-- PROCESS STEPS
+-- Lean detection data for PCT auto-detection (process-detection.js).
+-- Separate from simulations which carry full training content.
+-- Steps format: [{order, elementText, urlPattern}]
+-- Source: 'gemini' (auto from slides-to-sim), 'ppt' (bulk import), 'manual' (admin UI)
+-- ================================================================
+
+CREATE TABLE IF NOT EXISTS process_steps (
+  id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  process_name  TEXT        NOT NULL,
+  hub           TEXT,
+  source        TEXT        NOT NULL DEFAULT 'manual',
+  steps         JSONB       NOT NULL DEFAULT '[]',
+  published     BOOLEAN     NOT NULL DEFAULT true,
+  sim_id        TEXT        REFERENCES simulations(id) ON DELETE SET NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE process_steps DISABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_process_steps_process_name ON process_steps(process_name);
+CREATE INDEX IF NOT EXISTS idx_process_steps_published    ON process_steps(published) WHERE published = true;

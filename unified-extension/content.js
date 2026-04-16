@@ -417,19 +417,6 @@ class ProcessPulseOverlay {
         window.open(link, '_blank', 'noopener,noreferrer');
       }
 
-      // Start Process
-      const startBtn = e.target.closest('.valmo-start-btn');
-      if (startBtn) {
-        const processName = startBtn.dataset.process;
-        if (window.captainTimer?.startProcess) {
-          window.captainTimer.startProcess(processName);
-          this.closePanel();
-        } else {
-          // fallback: switch to timer tab if available
-          const timerBtn = document.querySelector('[data-tab="timer"]');
-          if (timerBtn) { timerBtn.click(); }
-        }
-      }
     });
   }
   
@@ -508,7 +495,6 @@ class ProcessPulseOverlay {
         <div class="valmo-process-name">${this.escape(proc.process_name)}</div>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
           <button class="valmo-video-btn" data-video-link="${this.escape(proc.video_link || '')}">🎥 Watch Video</button>
-          <button class="valmo-start-btn" data-process="${this.escape(proc.process_name)}">▶ Start Process</button>
         </div>
       </div>
     `).join('');

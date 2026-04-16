@@ -39,20 +39,20 @@
   // ── Load process definitions ──────────────────────────────────────────────────
   async function loadProcesses() {
     try {
-      const rows = await sbGet('simulations?published=eq.true&select=id,title,process_name,steps_json');
+      const rows = await sbGet('process_steps?published=eq.true&select=id,process_name,steps');
       const loaded = [];
       for (const row of rows) {
-        if (!Array.isArray(row.steps_json)) continue;
-        const steps = row.steps_json.filter(s => s.elementText && s.elementText.trim());
+        if (!Array.isArray(row.steps)) continue;
+        const steps = row.steps.filter(s => s.elementText && s.elementText.trim());
         if (!steps.length) continue;
         loaded.push({
           id:           row.id,
-          process_name: row.process_name || row.title,
+          process_name: row.process_name,
           steps,
         });
       }
       processes = loaded;
-      console.log(`[ProcessDetection] ${processes.length} process(es) loaded`);
+      console.log(`[ProcessDetection] ${processes.length} process(es) loaded from process_steps`);
     } catch (e) {
       console.warn('[ProcessDetection] Failed to load processes:', e);
     }
@@ -98,6 +98,8 @@
     const seq = sequences[processId];
     if (seq?.timeoutId) clearTimeout(seq.timeoutId);
     delete sequences[processId];
+    // Always clear activeId — even if something externally stopped the session,
+    // we must unblock so the next process can be detected.
     if (activeId === processId) activeId = null;
   }
 
@@ -303,8 +305,9 @@
     });
     div.querySelector('.vt-pd-btn-no').addEventListener('click', (e) => {
       e.stopPropagation();
-      // Reset to step 1 so they can re-trigger end detection
-      seq.step = proc.steps.length - 1;
+      // Step back one so end-detection can re-fire on the last step
+      seq.step = Math.max(proc.steps.length - 1, 0);
+      sequences[proc.id] = seq;
       div.remove();
     });
 
@@ -375,11 +378,11 @@
     _lastUrl = location.href;
     for (const proc of processes) {
       const seq = sequences[proc.id];
-      if (!seq?.pseudoStart || seq.confirmed) continue; // only unconfirmed pseudo-timers
-      // Check if the current next step's urlPattern still matches
+      // Reset any non-confirmed sequence (including silentMode) when URL leaves expected page
+      if (!seq?.pseudoStart || seq.confirmed) continue;
       const nextStep = proc.steps[seq.step] || proc.steps[0];
       if (nextStep?.urlPattern && !location.href.includes(nextStep.urlPattern)) {
-        console.log(`[ProcessDetection] "${proc.process_name}": URL changed, resetting unconfirmed sequence`);
+        console.log(`[ProcessDetection] "${proc.process_name}": URL changed, resetting sequence (silentMode=${!!seq.silentMode})`);
         hideSilentWarning();
         resetSeq(proc.id);
       }

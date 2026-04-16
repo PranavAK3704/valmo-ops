@@ -627,8 +627,8 @@
     if (document.getElementById('vt-launcher')) return;
     const btn = document.createElement('button');
     btn.id = 'vt-launcher';
-    btn.textContent = '🎓 Training';
-    btn.dataset.collapsed = 'false';
+    btn.textContent = '🎓';
+    btn.dataset.collapsed = 'true';
 
     btn.addEventListener('click', function (e) {
       // Long-press or double-click to collapse; single click opens modal

@@ -191,7 +191,7 @@ logoutBtn.addEventListener('click', () => {
 });
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
-function showLoggedIn(email, role, hub, hubCode, hubType, sessionRole) {
+function showLoggedIn(email, role, hub, hubCode, _hubType, sessionRole) {
   loginForm.style.display  = 'none';
   loggedInView.style.display = 'block';
   statusEl.textContent = '✓ Logged in';

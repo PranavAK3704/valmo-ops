@@ -406,9 +406,7 @@ class ProcessTimerTab {
       </div>
     `).join('');
 
-    listEl.querySelectorAll('.timer-sequence-item').forEach(item => {
-      item.addEventListener('click', () => this.startProcess(item.dataset.process));
-    });
+    // Sequence items are display-only — no click to start
   }
 
   /**
