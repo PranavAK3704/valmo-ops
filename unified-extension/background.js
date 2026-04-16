@@ -33,28 +33,54 @@ async function sbGet(path) {
 
 // ═══════════════════════════════════════════════════════════════
 // PROCESS PULSE (Log10 - Captains)
-// Videos now managed via admin panel → Supabase process_videos table
+// Primary source: Supabase process_videos (admin-managed)
+// Fallback: Google Sheet (legacy — used until process_videos is populated)
 // ═══════════════════════════════════════════════════════════════
 
-let log10ProcessesCache = null;
+const LEGACY_VIDEOS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTKDX4o1H_sZSJS_tUDo68N1SyjV3m3kbnkucjLe-4y1cUR3PBb2O49fbfNe2AQt-Oiuiu0Egj-wi_P/pub?output=csv';
 
 async function loadLog10Processes() {
+  // 1. Try Supabase process_videos first
   try {
     const rows = await sbGet('process_videos?select=process_name,video_url,starting_tab,hub,title');
     const processes = rows
       .filter(r => r.process_name && r.video_url)
       .map(r => ({
         process_name: r.process_name,
-        url_module:   (r.starting_tab || '').toLowerCase(),  // matched against URL tab fragment
+        url_module:   (r.starting_tab || '').toLowerCase(),
         start_tab:    r.starting_tab || '',
         video_link:   r.video_url,
         hub:          r.hub || null,
         title:        r.title || r.process_name,
       }));
-    console.log('[Process Pulse] Loaded', processes.length, 'video(s) from process_videos');
-    return processes;
+    if (processes.length > 0) {
+      console.log('[Process Pulse] Loaded', processes.length, 'video(s) from process_videos');
+      return processes;
+    }
+    console.log('[Process Pulse] process_videos empty — falling back to legacy sheet');
   } catch (err) {
     console.warn('[Process Pulse] Supabase fetch failed:', err.message);
+  }
+
+  // 2. Fallback: legacy Google Sheet (until process_videos is populated via admin)
+  try {
+    const resp = await fetch(LEGACY_VIDEOS_URL + '&t=' + Date.now());
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const csv  = await resp.text();
+    const rows = csv.trim().split('\n').slice(1);
+    const processes = rows
+      .map(r => r.split(','))
+      .filter(c => c[0] && c[1])
+      .map(c => ({
+        process_name: c[0]?.trim().replace(/"/g, ''),
+        url_module:   c[1]?.trim().replace(/"/g, ''),
+        start_tab:    c[2]?.trim().replace(/"/g, ''),
+        video_link:   c[3]?.trim().replace(/"/g, ''),
+      }));
+    console.log('[Process Pulse] Loaded', processes.length, 'from legacy sheet');
+    return processes;
+  } catch (err) {
+    console.warn('[Process Pulse] Legacy sheet also failed:', err.message);
     return [];
   }
 }
@@ -91,15 +117,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   const processes = await loadLog10Processes();
   const matches = findMatchingProcesses(url, processes);
   
-  try {
-    chrome.tabs.sendMessage(tabId, {
-      type: 'PULSE_UPDATE',
-      matches: matches
-    });
-    console.log(`[Process Pulse] Sent ${matches.length} matches for ${url}`)
-  } catch (err) {
-    // Ignore - tab not ready
-  }
+  chrome.tabs.sendMessage(tabId, { type: 'PULSE_UPDATE', matches })
+    .then(() => console.log(`[Process Pulse] Sent ${matches.length} matches for ${url}`))
+    .catch(() => { /* content script not ready yet — next requestMatches will catch up */ });
 });
 
 // ═══════════════════════════════════════════════════════════════
