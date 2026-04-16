@@ -184,18 +184,10 @@
       break;
     }
 
-    // Case 3: click outside sequence while in silent mode → stop pseudo-timer
-    if (!matched) {
-      const silentEntry = Object.entries(sequences).find(([, s]) => s.silentMode && s.pseudoStart);
-      if (silentEntry) {
-        const [procId, seq] = silentEntry;
-        const elapsed = Math.round((Date.now() - seq.pseudoStart) / 1000);
-        console.log(`[ProcessDetection] Off-sequence click in silent mode — stopping after ${elapsed}s`);
-        hideSilentWarning();
-        delete sequences[procId];
-        activeId = null;
-      }
-    }
+    // Case 3: off-sequence click in silentMode → ignore completely.
+    // The operator will click many untracked things mid-process (scans, rows, dropdowns).
+    // Sequence only resets on URL navigation away from the process or 30min timeout.
+    // (nothing to do here)
   }
 
   // ── Start confirmation toast ──────────────────────────────────────────────────
@@ -371,18 +363,23 @@
     }
   });
 
-  // Reset unconfirmed sequences when URL changes away from their expected page
+  // Reset unconfirmed sequences when URL changes away from ALL process steps.
+  // For confirmed sequences: never reset on URL change (operator is mid-process).
+  // For silentMode / pre-confirm: reset only if the new URL matches NO step's
+  // urlPattern — i.e. they navigated away from the process entirely.
+  // Intra-process navigation (e.g. /rto → /manifest → /lock) is NOT a reset.
   let _lastUrl = location.href;
   setInterval(() => {
     if (location.href === _lastUrl) return;
     _lastUrl = location.href;
     for (const proc of processes) {
       const seq = sequences[proc.id];
-      // Reset any non-confirmed sequence (including silentMode) when URL leaves expected page
-      if (!seq?.pseudoStart || seq.confirmed) continue;
-      const nextStep = proc.steps[seq.step] || proc.steps[0];
-      if (nextStep?.urlPattern && !location.href.includes(nextStep.urlPattern)) {
-        console.log(`[ProcessDetection] "${proc.process_name}": URL changed, resetting sequence (silentMode=${!!seq.silentMode})`);
+      if (!seq?.pseudoStart || seq.confirmed) continue;  // skip: no sequence or already confirmed
+      const anyStepMatches = proc.steps.some(
+        s => !s.urlPattern || location.href.includes(s.urlPattern)
+      );
+      if (!anyStepMatches) {
+        console.log(`[ProcessDetection] "${proc.process_name}": navigated away from process — resetting (silentMode=${!!seq.silentMode})`);
         hideSilentWarning();
         resetSeq(proc.id);
       }
