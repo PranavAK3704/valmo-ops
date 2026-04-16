@@ -13,67 +13,49 @@ console.log('[Valmo Ops] Service worker loaded');
 // ═══════════════════════════════════════════════════════════════
 
 const SHEETS_CONFIG = {
-  enabled: true,
-  training_videos_url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTKDX4o1H_sZSJS_tUDo68N1SyjV3m3kbnkucjLe-4y1cUR3PBb2O49fbfNe2AQt-Oiuiu0Egj-wi_P/pub?output=csv',
+  // SOPs + templates still read from Sheets (unchanged)
   sops_url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTtfp2EauVkBu1RILwErMMDs7mfwdzC1V9CdP0bf4ZjEsoe_QEr7o1slJm5tsMxNIqMK6vudtYjHCql/pub?gid=1281163884&single=true&output=csv',
   templates_url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNGnSVBmO7sU79z_zNfAa9N2S0yUSDR6yyOBTtnEi_m-XGBV6eBK0H9DJMuaDp_l0YA4enSjTKzNsk/pub?gid=0&single=true&output=csv',
   refresh_interval: 300000
 };
 
+// ── Supabase (process_videos) ─────────────────────────────────────────────────
+const SB_URL = 'https://wfnmltorfvaokqbzggkn.supabase.co';
+const SB_KEY = 'sb_publishable_kVRokdcfNT-egywk-KbQ3g_mEs5QVGW';
+
+async function sbGet(path) {
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, Accept: 'application/json' }
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // ═══════════════════════════════════════════════════════════════
 // PROCESS PULSE (Log10 - Captains)
+// Videos now managed via admin panel → Supabase process_videos table
 // ═══════════════════════════════════════════════════════════════
 
 let log10ProcessesCache = null;
 
 async function loadLog10Processes() {
   try {
-    if (!SHEETS_CONFIG.training_videos_url) throw new Error('No URL');
-    
-    const url = SHEETS_CONFIG.training_videos_url + '&t=' + Date.now();
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-    const csv = await response.text();
-    const rows = csv.trim().split('\n').slice(1); // skip header
-    
+    const rows = await sbGet('process_videos?select=process_name,video_url,starting_tab,hub,title');
     const processes = rows
-      .map(row => row.split(','))
-      .filter(cols => cols[0] && cols[1])
-      .map(cols => ({
-        process_name: cols[0]?.trim().replace(/"/g, ''),
-        url_module:   cols[1]?.trim().replace(/"/g, ''),
-        start_tab:    cols[2]?.trim().replace(/"/g, ''),
-        video_link:   cols[3]?.trim().replace(/"/g, ''),  // kept for future use — currently replaced by simulations
-        platform:     cols[4]?.trim().replace(/"/g, ''),
-        // PHASE 1: New columns for progress tracking & gamification
-        priority:     cols[5]?.trim().replace(/"/g, '') || 'GOOD_TO_KNOW',
-        status:       cols[6]?.trim().replace(/"/g, '') || 'STABLE',
-        date_added:   cols[7]?.trim().replace(/"/g, '') || new Date().toISOString().split('T')[0],
-        date_updated: cols[8]?.trim().replace(/"/g, '') || new Date().toISOString().split('T')[0],
-        version:      cols[9]?.trim().replace(/"/g, '') || '1.0',
-        completion_required: (cols[10]?.trim().replace(/"/g, '') || 'FALSE').toUpperCase() === 'TRUE'
+      .filter(r => r.process_name && r.video_url)
+      .map(r => ({
+        process_name: r.process_name,
+        url_module:   (r.starting_tab || '').toLowerCase(),  // matched against URL tab fragment
+        start_tab:    r.starting_tab || '',
+        video_link:   r.video_url,
+        hub:          r.hub || null,
+        title:        r.title || r.process_name,
       }));
-
-    console.log('[Process Pulse] Loaded', processes.length, 'from Training_Videos sheet');
-    
-    // PHASE 1: Log breakdown by priority
-    const mustKnow = processes.filter(p => p.priority === 'MUST_KNOW').length;
-    const goodToKnow = processes.filter(p => p.priority === 'GOOD_TO_KNOW').length;
-    console.log(`[Process Pulse]   - ${mustKnow} MUST_KNOW, ${goodToKnow} GOOD_TO_KNOW`);
-    
-    // PHASE 1: Log breakdown by status
-    const newProcs = processes.filter(p => p.status === 'NEW').length;
-    const updated = processes.filter(p => p.status === 'UPDATED').length;
-    console.log(`[Process Pulse]   - ${newProcs} NEW, ${updated} UPDATED`);
-    
+    console.log('[Process Pulse] Loaded', processes.length, 'video(s) from process_videos');
     return processes;
-
   } catch (err) {
-    console.warn('[Process Pulse] Sheet failed, using local fallback:', err.message);
-    const localUrl = chrome.runtime.getURL('data/log10_processes.json');
-    const response = await fetch(localUrl);
-    return await response.json();
+    console.warn('[Process Pulse] Supabase fetch failed:', err.message);
+    return [];
   }
 }
 
