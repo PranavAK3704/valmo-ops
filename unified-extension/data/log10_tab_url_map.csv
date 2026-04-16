@@ -1,0 +1,15 @@
+tab,url
+sc-ops dashboard,https://console.valmo.in/operations/sc-ops/dashboard/sc-overview
+fm-ops dashboard,https://console.valmo.in/operations/fm-ops/dashboard/forward
+tracking,https://console.valmo.in/operations/tracking/dashboard/tracking
+leads,https://console.valmo.in/operations/leads/dashboard/pickup-report
+inbound,https://console.valmo.in/operations/inbound/dashboard/scan
+inventory,https://console.valmo.in/operations/inventory/dashboard/awb
+trips,https://console.valmo.in/operations/trips/dashboard/connection-sheet
+pod,https://console.valmo.in/operations/pod/dashboard/drs
+cod,https://console.valmo.in/operations/cod/dashboard/cod
+rto,https://console.valmo.in/operations/rto/dashboard/waybill
+reports,https://console.valmo.in/operations/reports/dashboard/download
+digital payments,https://console.valmo.in/operations/digital-payment/dashboard/payment-status
+monitoring reports,https://console.valmo.in/operations/monitoring-reports/dashboard/mid-mile?date_params=start_date
+lm-ops dashboard,https://console.valmo.in/operations/lm-ops/dashboard/pendency
