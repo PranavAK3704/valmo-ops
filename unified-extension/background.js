@@ -77,10 +77,23 @@ async function loadLog10Processes() {
         start_tab:    c[2]?.trim().replace(/"/g, ''),
         video_link:   c[3]?.trim().replace(/"/g, ''),
       }));
-    console.log('[Process Pulse] Loaded', processes.length, 'from legacy sheet');
-    return processes;
+    if (processes.length > 0) {
+      console.log('[Process Pulse] Loaded', processes.length, 'from legacy sheet');
+      return processes;
+    }
   } catch (err) {
-    console.warn('[Process Pulse] Legacy sheet also failed:', err.message);
+    console.warn('[Process Pulse] Legacy sheet failed:', err.message);
+  }
+
+  // 3. Final fallback: bundled local JSON
+  try {
+    const localUrl = chrome.runtime.getURL('data/log10_processes.json');
+    const resp = await fetch(localUrl);
+    const data = await resp.json();
+    console.log('[Process Pulse] Loaded', data.length, 'from local JSON fallback');
+    return data;
+  } catch (err) {
+    console.warn('[Process Pulse] Local JSON fallback failed:', err.message);
     return [];
   }
 }
